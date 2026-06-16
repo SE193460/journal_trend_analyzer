@@ -3,32 +3,34 @@ import 'package:provider/provider.dart';
 
 import '../providers/publication_provider.dart';
 
-class TopJournalScreen extends StatelessWidget {
-  const TopJournalScreen({super.key});
+class TopAuthorScreen extends StatelessWidget {
+  const TopAuthorScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     var provider = Provider.of<PublicationProvider>(context);
 
-    Map<String, int> journals = {};
+    Map<String, int> authors = {};
 
     for (var p in provider.publications) {
-      if (p.journal.isNotEmpty) {
-        journals[p.journal] = (journals[p.journal] ?? 0) + 1;
+      for (var author in p.authors) {
+        if (author.isNotEmpty) {
+          authors[author] = (authors[author] ?? 0) + 1;
+        }
       }
     }
 
-    var sortedJournals = journals.entries.toList()
+    var sortedAuthors = authors.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Top Journals"),
+        title: Text("Top Authors"),
       ),
       body: ListView.builder(
-        itemCount: sortedJournals.length,
+        itemCount: sortedAuthors.length,
         itemBuilder: (context, index) {
-          var entry = sortedJournals[index];
+          var entry = sortedAuthors[index];
           return ListTile(
             leading: Text("${index + 1}"),
             title: Text(entry.key),
