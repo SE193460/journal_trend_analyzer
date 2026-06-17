@@ -31,4 +31,15 @@ class OpenAlexService{
     }
   }
 
+  Future<List<Publication>> fetchTopInfluentialPapers(String keyword) async {
+    try {
+      final response = await dio.get(
+        'https://api.openalex.org/works?search=$keyword&sort=cited_by_count:desc&per-page=20'
+      );
+      List results = response.data['results'];
+      return results.map((e) => Publication.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception("Top Papers API Failed");
+    }
+  }
 }
