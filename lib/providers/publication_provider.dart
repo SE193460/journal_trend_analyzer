@@ -7,6 +7,7 @@ class PublicationProvider extends ChangeNotifier {
 
   List<Publication> publications = [];
   List<PublicationTrendPoint> trendData = [];
+  List<Publication> topPapers = [];
   
   bool isLoading = false;
   String errorMessage = "";
@@ -22,10 +23,12 @@ class PublicationProvider extends ChangeNotifier {
       var futures = await Future.wait([
         _service.searchPublication(keyword),
         _service.fetchPublicationTrend(keyword),
+        _service.fetchTopInfluentialPapers(keyword),
       ]);
 
       publications = futures[0] as List<Publication>;
       trendData = futures[1] as List<PublicationTrendPoint>;
+      topPapers = futures[2] as List<Publication>;
 
     } catch (e) {
       errorMessage = "Error: $e";
