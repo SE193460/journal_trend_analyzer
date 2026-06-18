@@ -13,6 +13,7 @@ import 'top_paper_screen.dart';
 import 'dashboard_screen.dart';
 import 'top_journal_screen.dart';
 import 'top_author_screen.dart';
+import 'compare_topics_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -53,6 +54,9 @@ class _SearchScreenState extends State<SearchScreen> {
     if (_currentIndex == 1) return _wrapWithBottomNav(const TrendScreen());
     if (_currentIndex == 2) return _wrapWithBottomNav(const TopPaperScreen());
     if (_currentIndex == 3) return _wrapWithBottomNav(const DashboardScreen());
+    if (_currentIndex == 4) {
+      return _wrapWithBottomNav(const CompareTopicsScreen());
+    }
 
     final provider = Provider.of<PublicationProvider>(context);
 
@@ -142,6 +146,8 @@ class _SearchScreenState extends State<SearchScreen> {
               Icons.article_rounded, context.s.menuTopPapers, () => _goTo(2)),
           _drawerTile(
               Icons.dashboard_rounded, context.s.menuDashboard, () => _goTo(3)),
+          _drawerTile(Icons.compare_arrows_rounded, context.s.menuCompare,
+              () => _goTo(4)),
           const Divider(indent: 16, endIndent: 16),
           _drawerTile(Icons.menu_book_rounded, context.s.menuTopJournals, () {
             Navigator.pop(context);
@@ -224,6 +230,9 @@ class _SearchScreenState extends State<SearchScreen> {
           BottomNavigationBarItem(
               icon: const Icon(Icons.dashboard_rounded),
               label: context.s.navDashboardShort),
+          BottomNavigationBarItem(
+              icon: const Icon(Icons.compare_arrows_rounded),
+              label: context.s.navCompareShort),
         ],
       ),
     );

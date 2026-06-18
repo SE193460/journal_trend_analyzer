@@ -264,9 +264,25 @@ class RankBadge extends StatelessWidget {
 class StateView {
   StateView._();
 
+  /// Centers [child] but lets it scroll when it is taller than the available
+  /// space (small screens, large system fonts, long error messages), so the
+  /// state view never overflows on Android.
+  static Widget _scrollableCenter(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(child: child),
+          ),
+        );
+      },
+    );
+  }
+
   static Widget loading({String? message}) {
-    return Center(
-      child: Column(
+    return _scrollableCenter(
+      Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(
@@ -292,8 +308,8 @@ class StateView {
     String title = "Something went wrong",
     String retryLabel = "Try again",
   }) {
-    return Center(
-      child: Padding(
+    return _scrollableCenter(
+      Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -342,8 +358,8 @@ class StateView {
     required String title,
     String? message,
   }) {
-    return Center(
-      child: Padding(
+    return _scrollableCenter(
+      Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,

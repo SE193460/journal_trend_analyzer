@@ -49,11 +49,93 @@ class AppStrings {
   String get navTrendsShort => _t('Trends', 'Xu hướng');
   String get navPapersShort => _t('Papers', 'Bài báo');
   String get navDashboardShort => _t('Dashboard', 'Tổng quan');
+  String get navCompareShort => _t('Compare', 'So sánh');
   String get menuTrendAnalysis => _t('Trend Analysis', 'Phân tích xu hướng');
   String get menuTopPapers => _t('Top Papers', 'Bài báo hàng đầu');
   String get menuDashboard => _t('Dashboard', 'Tổng quan');
   String get menuTopJournals => _t('Top Journals', 'Tạp chí hàng đầu');
   String get menuTopAuthors => _t('Top Authors', 'Tác giả hàng đầu');
+  String get menuCompare => _t('Compare Topics', 'So sánh chủ đề');
+
+  // ─── Compare Topics screen ───────────────────────────────
+  String get compareTitle => _t('Compare Topics', 'So sánh Chủ đề');
+  String get compareSubtitle =>
+      _t('Compare up to 3 research topics', 'So sánh tối đa 3 chủ đề nghiên cứu');
+  String get compareInputTitle =>
+      _t('Enter 2–3 research topics', 'Nhập 2–3 chủ đề nghiên cứu');
+  String compareTopicHint(int index) => _t('Topic $index', 'Chủ đề $index');
+  String get compareAddTopic => _t('Add topic', 'Thêm chủ đề');
+  String get compareRemoveTopic => _t('Remove topic', 'Bỏ chủ đề');
+  String get compareButton => _t('Compare', 'So sánh');
+  String get compareValidationMin => _t(
+      'Please enter at least 2 non-empty topics',
+      'Vui lòng nhập ít nhất 2 chủ đề không để trống');
+  String get compareLoading =>
+      _t('Comparing topics…', 'Đang so sánh các chủ đề…');
+  String get compareEmptyTitle =>
+      _t('Compare research topics', 'So sánh các chủ đề nghiên cứu');
+  String get compareEmptyMessage => _t(
+      'Enter 2 or 3 topics above and tap Compare to see them side by side.',
+      'Nhập 2 hoặc 3 chủ đề phía trên rồi nhấn So sánh để xem song song.');
+
+  // Winner summary cards
+  String get compareMostPublications =>
+      _t('Most publications', 'Nhiều công bố nhất');
+  String get compareHighestAvgCitations =>
+      _t('Highest avg. citations', 'Trích dẫn TB cao nhất');
+
+  // Comparison table
+  String get compareTableTitle => _t('Comparison', 'Bảng so sánh');
+  String get compareChartTitle =>
+      _t('Publications by topic', 'Số công bố theo chủ đề');
+  String get mTotalPublications => _t('Total publications', 'Tổng công bố');
+  String get mAvgCitations => _t('Avg. citations', 'Trích dẫn TB');
+  String get mMostActiveYear => _t('Most active year', 'Năm sôi động nhất');
+  String get mTopJournal => _t('Top journal', 'Tạp chí hàng đầu');
+  String get mTopAuthor => _t('Top author', 'Tác giả hàng đầu');
+  String get mMostInfluential =>
+      _t('Most influential paper', 'Bài báo ảnh hưởng nhất');
+
+  // ─── Topic suggestions (recommendation) ──────────────────
+  String get recoTitle => _t('Topic suggestions', 'Gợi ý chọn đề tài');
+  String get recoSubtitle => _t(
+      'Based on the compared OpenAlex data', 'Dựa trên dữ liệu OpenAlex đã so sánh');
+
+  // Suggestion categories + short labels
+  String get recoCatPopular => _t('Most popular', 'Phổ biến nhất');
+  String get recoCatImpact => _t('Highest impact', 'Ảnh hưởng cao nhất');
+  String get recoCatNarrower =>
+      _t('Narrower direction', 'Hướng nghiên cứu hẹp hơn');
+  String get recoLabelPopular => _t('Easy to find sources', 'Dễ tìm tài liệu');
+  String get recoLabelImpact =>
+      _t('High academic impact', 'Ảnh hưởng học thuật cao');
+  String get recoLabelNarrower => _t('Narrower niche', 'Hướng hẹp hơn');
+
+  // Reasons (parameterized with the topic name)
+  String recoReasonPopular(String topic) => _t(
+      '$topic has the most publications, so reference material is easy to find.',
+      '$topic có tổng số công bố cao nhất — dễ tìm tài liệu tham khảo.');
+  String recoReasonImpact(String topic) => _t(
+      '$topic has the highest average citations, signalling strong academic impact.',
+      '$topic có trích dẫn trung bình cao nhất — mức độ ảnh hưởng học thuật mạnh.');
+  String recoReasonNarrower(String topic) => _t(
+      '$topic has fewer publications, a good fit for a narrower, less crowded direction.',
+      '$topic có ít công bố hơn — phù hợp cho hướng nghiên cứu hẹp, ít cạnh tranh.');
+
+  // Recommended topic
+  String get recoRecommendedTitle => _t('Recommended topic', 'Đề tài được đề xuất');
+  String recoRecommendedByImpact(String topic) => _t(
+      '$topic is recommended because it has the highest average citations, showing strong academic impact and fitting trend-oriented research.',
+      '$topic được đề xuất vì có trích dẫn trung bình cao nhất, cho thấy mức độ ảnh hưởng học thuật mạnh và phù hợp với các đề tài mang tính xu hướng.');
+  String recoRecommendedByOverall(String topic) => _t(
+      '$topic is recommended for the highest overall score, balancing volume, impact and recency.',
+      '$topic được đề xuất vì có điểm tổng hợp cao nhất — cân bằng giữa lượng công bố, mức ảnh hưởng và tính cập nhật.');
+
+  // Score breakdown labels
+  String get scorePopularity => _t('Popularity', 'Độ phổ biến');
+  String get scoreImpact => _t('Impact', 'Ảnh hưởng');
+  String get scoreRecency => _t('Recency', 'Tính cập nhật');
+  String get scoreOverall => _t('Overall score', 'Điểm tổng hợp');
 
   // ─── Trend screen ────────────────────────────────────────
   String get trendTitle => _t('Publication Trend', 'Xu hướng Công bố');

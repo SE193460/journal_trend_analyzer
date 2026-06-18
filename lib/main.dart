@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'l10n/locale_provider.dart';
+import 'providers/compare_provider.dart';
 import 'providers/publication_provider.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
@@ -11,6 +12,7 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => PublicationProvider()),
+        ChangeNotifierProvider(create: (_) => CompareProvider()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
       ],
       child: const MyApp(),
