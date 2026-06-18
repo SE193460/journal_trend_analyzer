@@ -5,6 +5,8 @@ import 'package:fl_chart/fl_chart.dart';
 
 import '../providers/publication_provider.dart';
 import '../models/publication.dart';
+import '../theme/app_theme.dart';
+import '../widgets/common.dart';
 
 class TrendScreen extends StatefulWidget {
   const TrendScreen({super.key});
@@ -20,35 +22,33 @@ class _TrendScreenState extends State<TrendScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var provider = Provider.of<PublicationProvider>(context);
+    final provider = Provider.of<PublicationProvider>(context);
 
-    if (provider.isLoading) {
-      return Scaffold(
-        backgroundColor: Colors.grey[50],
-        appBar: _buildAppBar(),
-        body: const Center(child: CircularProgressIndicator(color: Colors.blueAccent)),
-      );
-    }
-
-    if (provider.errorMessage.isNotEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.grey[50],
-        appBar: _buildAppBar(),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
-              const SizedBox(height: 16),
-              Text(provider.errorMessage, style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => provider.search(provider.currentTopic),
-                child: const Text("Retry"),
-              )
-            ],
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Column(
+        children: [
+          BrandedHeader(
+            title: "Publication Trend",
+            subtitle: provider.currentTopic.isNotEmpty
+                ? "Research trend for “${provider.currentTopic}”"
+                : "Papers published by year",
+            icon: Icons.trending_up_rounded,
           ),
-        ),
+          Expanded(child: _buildBody(provider)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody(PublicationProvider provider) {
+    if (provider.isLoading) {
+      return StateView.loading(message: "Loading trend data…");
+    }
+    if (provider.errorMessage.isNotEmpty) {
+      return StateView.error(
+        provider.errorMessage,
+        onRetry: () => provider.search(provider.currentTopic),
       );
     }
 
@@ -58,146 +58,131 @@ class _TrendScreenState extends State<TrendScreen> {
     baseData.sort((a, b) => a.year.compareTo(b.year));
 
     if (baseData.isEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.grey[50],
-        appBar: _buildAppBar(),
-        body: const Center(
-          child: Text(
-            "No publication trend data found for this topic.",
-            style: TextStyle(fontSize: 16, color: Colors.black54),
-          ),
-        ),
+      return StateView.empty(
+        icon: Icons.show_chart_rounded,
+        title: "No trend data",
+        message: "Search a topic to see how publications evolved over time.",
       );
     }
 
     double absoluteMin = baseData.first.year.toDouble();
     double absoluteMax = baseData.last.year.toDouble();
-    
     if (absoluteMin == absoluteMax) {
       absoluteMin -= 1;
       absoluteMax += 1;
     }
 
-    if (_lastTopic != provider.currentTopic || _startYear == null || _endYear == null) {
+    if (_lastTopic != provider.currentTopic ||
+        _startYear == null ||
+        _endYear == null) {
       _lastTopic = provider.currentTopic;
       _startYear = absoluteMin;
       _endYear = absoluteMax;
     }
 
-    List<PublicationTrendPoint> trendData = baseData.where((t) {
-      return t.year >= _startYear!.toInt() && t.year <= _endYear!.toInt();
-    }).toList();
+    final trendData = baseData
+        .where((t) =>
+            t.year >= _startYear!.toInt() && t.year <= _endYear!.toInt())
+        .toList();
 
-    List<FlSpot> spots = [];
+    final spots = <FlSpot>[];
     int totalPapers = 0;
     int maxCount = 0;
     int peakYear = trendData.isNotEmpty ? trendData.first.year : _startYear!.toInt();
 
-    if (trendData.isNotEmpty) {
-      for (var t in trendData) {
-        totalPapers += t.count;
-        if (t.count > maxCount) {
-          maxCount = t.count;
-          peakYear = t.year;
-        }
-        spots.add(FlSpot(t.year.toDouble(), t.count.toDouble()));
+    for (var t in trendData) {
+      totalPapers += t.count;
+      if (t.count > maxCount) {
+        maxCount = t.count;
+        peakYear = t.year;
       }
+      spots.add(FlSpot(t.year.toDouble(), t.count.toDouble()));
     }
 
-    int firstYear = trendData.isNotEmpty ? trendData.first.year : _startYear!.toInt();
-    int lastYear = trendData.isNotEmpty ? trendData.last.year : _endYear!.toInt();
-    String yearRange = firstYear == lastYear ? "$firstYear" : "$firstYear - $lastYear";
+    final firstYear =
+        trendData.isNotEmpty ? trendData.first.year : _startYear!.toInt();
+    final lastYear =
+        trendData.isNotEmpty ? trendData.last.year : _endYear!.toInt();
+    final yearRange = firstYear == lastYear ? "$firstYear" : "$firstYear–$lastYear";
 
-    String insightText = "Publication activity peaked in $peakYear with $maxCount papers.";
+    String insightText =
+        "Publication activity peaked in $peakYear with ${_compact(maxCount)} papers.";
     if (trendData.isNotEmpty && firstYear != lastYear) {
-      int firstCount = trendData.first.count;
-      int lastCount = trendData.last.count;
+      final firstCount = trendData.first.count;
+      final lastCount = trendData.last.count;
       if (lastCount > firstCount && lastYear > peakYear - 2) {
         insightText += " Research activity has generally increased over time.";
       } else if (lastCount < maxCount && lastYear > peakYear) {
         insightText += " Research activity declined after its peak.";
       }
     } else if (trendData.isEmpty) {
-       insightText = "No data available for the selected range.";
+      insightText = "No data available for the selected range.";
     }
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: _buildAppBar(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(provider.currentTopic),
-            const SizedBox(height: 24),
-            _buildYearRangeSlider(absoluteMin, absoluteMax),
-            const SizedBox(height: 24),
-            _buildSummaryCards(totalPapers, peakYear, yearRange),
-            const SizedBox(height: 24),
-            if (spots.isNotEmpty) _buildChartCard(spots, firstYear, lastYear, maxCount),
-            if (spots.isEmpty) const Center(child: Text("No data in this range.", style: TextStyle(color: Colors.black54))),
-            const SizedBox(height: 24),
-            _buildInsightSection(insightText),
-          ],
-        ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildYearRangeSlider(absoluteMin, absoluteMax),
+          const SizedBox(height: 16),
+          _buildSummaryCards(totalPapers, peakYear, yearRange),
+          const SizedBox(height: 16),
+          if (spots.isNotEmpty)
+            _buildChartCard(spots, firstYear, lastYear, maxCount)
+          else
+            const SectionCard(
+              child: Center(
+                child: Text("No data in this range.",
+                    style: TextStyle(color: AppColors.muted)),
+              ),
+            ),
+          const SizedBox(height: 16),
+          _buildInsightSection(insightText),
+        ],
       ),
-    );
-  }
-
-  AppBar _buildAppBar() {
-    return AppBar(
-      title: const Text("Publication Trend", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-      backgroundColor: Colors.white,
-      elevation: 0,
-      centerTitle: true,
-      iconTheme: const IconThemeData(color: Colors.black87),
-    );
-  }
-
-  Widget _buildHeader(String topic) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Publication Trend",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.black87),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          topic.isNotEmpty ? "Research trend for: $topic" : "Number of papers published by year",
-          style: const TextStyle(fontSize: 16, color: Colors.black54),
-        ),
-      ],
     );
   }
 
   Widget _buildYearRangeSlider(double min, double max) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+    return SectionCard(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Filter by Year:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
-              Text("${_startYear!.toInt()} - ${_endYear!.toInt()}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+              const Text("Filter by year",
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: AppColors.ink)),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  "${_startYear!.toInt()} – ${_endYear!.toInt()}",
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                      fontSize: 13),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 8),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              activeTrackColor: Colors.blueAccent,
-              inactiveTrackColor: Colors.blueAccent.withOpacity(0.2),
+              activeTrackColor: AppColors.primary,
+              inactiveTrackColor: AppColors.primary.withValues(alpha: 0.18),
               thumbColor: Colors.white,
-              overlayColor: Colors.blueAccent.withOpacity(0.1),
-              valueIndicatorColor: Colors.blueAccent,
+              overlayColor: AppColors.primary.withValues(alpha: 0.12),
+              valueIndicatorColor: AppColors.primary,
+              trackHeight: 4,
               valueIndicatorTextStyle: const TextStyle(color: Colors.white),
             ),
             child: RangeSlider(
@@ -205,13 +190,12 @@ class _TrendScreenState extends State<TrendScreen> {
               min: min,
               max: max,
               divisions: (max - min).toInt() > 0 ? (max - min).toInt() : 1,
-              labels: RangeLabels(_startYear!.toInt().toString(), _endYear!.toInt().toString()),
-              onChanged: (RangeValues values) {
-                setState(() {
-                  _startYear = values.start;
-                  _endYear = values.end;
-                });
-              },
+              labels: RangeLabels(
+                  _startYear!.toInt().toString(), _endYear!.toInt().toString()),
+              onChanged: (values) => setState(() {
+                _startYear = values.start;
+                _endYear = values.end;
+              }),
             ),
           ),
         ],
@@ -222,75 +206,86 @@ class _TrendScreenState extends State<TrendScreen> {
   Widget _buildSummaryCards(int total, int peakYear, String range) {
     return Row(
       children: [
-        Expanded(child: _buildStatCard("Total Papers", "$total")),
+        Expanded(
+            child: _statCard("Total Papers", _compact(total),
+                Icons.description_rounded, AppColors.primary)),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard("Peak Year", "$peakYear")),
+        Expanded(
+            child: _statCard("Peak Year", "$peakYear",
+                Icons.local_fire_department_rounded, AppColors.amber)),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard("Year Range", range)),
+        Expanded(
+            child: _statCard("Year Range", range,
+                Icons.date_range_rounded, AppColors.sky)),
       ],
     );
   }
 
-  Widget _buildStatCard(String title, String value) {
-    return Container(
+  Widget _statCard(String title, String value, IconData icon, Color color) {
+    return SectionCard(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
       child: Column(
         children: [
-          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
-          const SizedBox(height: 4),
-          Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w500)),
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 8),
+          FittedBox(
+            child: Text(value,
+                style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink)),
+          ),
+          const SizedBox(height: 2),
+          Text(title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 11.5,
+                  color: AppColors.muted,
+                  fontWeight: FontWeight.w500)),
         ],
       ),
     );
   }
 
-  Widget _buildChartCard(List<FlSpot> spots, int firstYear, int lastYear, int maxCount) {
-    double interval = max(1.0, ((lastYear - firstYear) / 4).floorToDouble());
-    
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
+  Widget _buildChartCard(
+      List<FlSpot> spots, int firstYear, int lastYear, int maxCount) {
+    final interval = max(1.0, ((lastYear - firstYear) / 4).floorToDouble());
+
+    return SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Papers by Publication Year",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
-          ),
+          const SectionTitle(
+              title: "Papers by publication year",
+              icon: Icons.stacked_line_chart_rounded),
           const SizedBox(height: 24),
           SizedBox(
-            height: 250,
+            height: 240,
             child: LineChart(
               LineChartData(
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey[200], strokeWidth: 1),
+                  getDrawingHorizontalLine: (value) =>
+                      const FlLine(color: AppColors.border, strokeWidth: 1),
                 ),
                 titlesData: FlTitlesData(
                   show: true,
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 30,
                       interval: interval,
-                      getTitlesWidget: (value, meta) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(value.toInt().toString(), style: const TextStyle(color: Colors.black54, fontSize: 12)),
-                        );
-                      },
+                      getTitlesWidget: (value, meta) => Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(value.toInt().toString(),
+                            style: const TextStyle(
+                                color: AppColors.muted, fontSize: 11)),
+                      ),
                     ),
                   ),
                   leftTitles: AxisTitles(
@@ -300,7 +295,9 @@ class _TrendScreenState extends State<TrendScreen> {
                       interval: max(1, (maxCount / 4).floorToDouble()),
                       getTitlesWidget: (value, meta) {
                         if (value == value.toInt().toDouble()) {
-                          return Text(value.toInt().toString(), style: const TextStyle(color: Colors.black54, fontSize: 12));
+                          return Text(_compact(value.toInt()),
+                              style: const TextStyle(
+                                  color: AppColors.muted, fontSize: 11));
                         }
                         return const Text('');
                       },
@@ -311,41 +308,50 @@ class _TrendScreenState extends State<TrendScreen> {
                 minX: firstYear.toDouble(),
                 maxX: lastYear.toDouble(),
                 minY: 0,
-                maxY: maxCount.toDouble() + (maxCount * 0.2), // 20% padding top
+                maxY: maxCount.toDouble() + (maxCount * 0.2),
                 lineBarsData: [
                   LineChartBarData(
                     spots: spots,
                     isCurved: true,
-                    color: Colors.blueAccent,
-                    barWidth: 3,
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primaryBright, AppColors.primary],
+                    ),
+                    barWidth: 3.5,
                     isStrokeCapRound: true,
                     dotData: FlDotData(
                       show: true,
-                      getDotPainter: (spot, percent, barData, index) {
-                        return FlDotCirclePainter(
-                          radius: 4,
-                          color: Colors.white,
-                          strokeWidth: 2,
-                          strokeColor: Colors.blueAccent,
-                        );
-                      },
+                      getDotPainter: (spot, percent, barData, index) =>
+                          FlDotCirclePainter(
+                        radius: 3.5,
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                        strokeColor: AppColors.primary,
+                      ),
                     ),
                     belowBarData: BarAreaData(
                       show: true,
-                      color: Colors.blueAccent.withOpacity(0.1),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.primary.withValues(alpha: 0.22),
+                          AppColors.primary.withValues(alpha: 0.0),
+                        ],
+                      ),
                     ),
                   ),
                 ],
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
-                    getTooltipItems: (touchedSpots) {
-                      return touchedSpots.map((spot) {
-                        return LineTooltipItem(
-                          "${spot.x.toInt()} · ${spot.y.toInt()} papers",
-                          const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        );
-                      }).toList();
-                    },
+                    getTooltipColor: (_) => AppColors.ink,
+                    getTooltipItems: (touchedSpots) => touchedSpots
+                        .map((spot) => LineTooltipItem(
+                              "${spot.x.toInt()} · ${_compact(spot.y.toInt())} papers",
+                              const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold),
+                            ))
+                        .toList(),
                   ),
                 ),
               ),
@@ -358,25 +364,48 @@ class _TrendScreenState extends State<TrendScreen> {
 
   Widget _buildInsightSection(String text) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade100),
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.lightbulb_outline, color: Colors.blueAccent, size: 24),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+                color: AppColors.primary, shape: BoxShape.circle),
+            child: const Icon(Icons.lightbulb_rounded,
+                color: Colors.white, size: 16),
+          ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(color: Colors.black87, fontSize: 14, height: 1.5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Insight",
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                        fontSize: 13)),
+                const SizedBox(height: 4),
+                Text(text,
+                    style: const TextStyle(
+                        color: AppColors.body, fontSize: 13.5, height: 1.5)),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _compact(int n) {
+    if (n >= 1000000) return "${(n / 1000000).toStringAsFixed(1)}M";
+    if (n >= 1000) return "${(n / 1000).toStringAsFixed(1)}K";
+    return "$n";
   }
 }
