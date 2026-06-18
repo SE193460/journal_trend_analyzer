@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/locale_provider.dart';
 import '../providers/publication_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
@@ -24,19 +25,18 @@ class TopAuthorScreen extends StatelessWidget {
       body: Column(
         children: [
           BrandedHeader(
-            title: "Top Authors",
+            title: context.s.topAuthorsTitle,
             subtitle: provider.currentTopic.isNotEmpty
-                ? "Most prolific authors for “${provider.currentTopic}”"
-                : "Authors ranked by publications",
+                ? context.s.topAuthorsSubtitleForTopic(provider.currentTopic)
+                : context.s.topAuthorsSubtitleDefault,
             icon: Icons.people_alt_rounded,
           ),
           Expanded(
             child: authors.isEmpty
                 ? StateView.empty(
                     icon: Icons.people_alt_rounded,
-                    title: "No authors yet",
-                    message:
-                        "Search a topic first to rank authors by publication count.",
+                    title: context.s.noAuthorsTitle,
+                    message: context.s.noAuthorsMessage,
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
@@ -46,7 +46,8 @@ class TopAuthorScreen extends StatelessWidget {
                       final entry = authors[index];
                       final name = entry['name']?.toString() ?? "Unknown";
                       final count = (entry['count'] as int?) ?? 0;
-                      return _authorCard(index + 1, name, count, maxCount);
+                      return _authorCard(
+                          context, index + 1, name, count, maxCount);
                     },
                   ),
           ),
@@ -55,7 +56,8 @@ class TopAuthorScreen extends StatelessWidget {
     );
   }
 
-  Widget _authorCard(int rank, String name, int count, int maxCount) {
+  Widget _authorCard(
+      BuildContext context, int rank, String name, int count, int maxCount) {
     final ratio = (count / maxCount).clamp(0.05, 1.0);
     return SectionCard(
       padding: const EdgeInsets.all(14),
@@ -98,8 +100,8 @@ class TopAuthorScreen extends StatelessWidget {
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                       color: AppColors.violet)),
-              const Text("papers",
-                  style: TextStyle(fontSize: 11, color: AppColors.muted)),
+              Text(context.s.papersUnit,
+                  style: const TextStyle(fontSize: 11, color: AppColors.muted)),
             ],
           ),
         ],

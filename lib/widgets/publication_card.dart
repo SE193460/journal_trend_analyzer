@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/locale_provider.dart';
 import '../models/publication.dart';
 import '../screens/detail_screen.dart';
 import '../theme/app_theme.dart';
@@ -16,7 +17,7 @@ class PublicationCard extends StatelessWidget {
             (publication.authors.length > 3
                 ? " +${publication.authors.length - 3}"
                 : "")
-        : "Unknown authors";
+        : context.s.unknownAuthors;
 
     return Material(
       color: AppColors.card,
@@ -42,7 +43,7 @@ class PublicationCard extends StatelessWidget {
               Text(
                 publication.title.isNotEmpty
                     ? publication.title
-                    : "Untitled work",
+                    : context.s.untitledWork,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -99,7 +100,7 @@ class PublicationCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   _badge(
                     Icons.format_quote_rounded,
-                    "${_compact(publication.citationCount)} cites",
+                    context.s.citesBadge(_compact(publication.citationCount)),
                     AppColors.primary,
                   ),
                   const Spacer(),

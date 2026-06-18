@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/locale_provider.dart';
 import '../providers/publication_provider.dart';
 import '../models/publication.dart';
 import '../theme/app_theme.dart';
@@ -19,10 +20,10 @@ class TopPaperScreen extends StatelessWidget {
       body: Column(
         children: [
           BrandedHeader(
-            title: "Top Influential Papers",
+            title: context.s.topPapersTitle,
             subtitle: provider.currentTopic.isNotEmpty
-                ? "Most cited research for “${provider.currentTopic}”"
-                : "Highest cited papers",
+                ? context.s.topPapersSubtitleForTopic(provider.currentTopic)
+                : context.s.topPapersSubtitleDefault,
             icon: Icons.workspace_premium_rounded,
           ),
           Expanded(child: _buildBody(context, provider)),
@@ -33,11 +34,13 @@ class TopPaperScreen extends StatelessWidget {
 
   Widget _buildBody(BuildContext context, PublicationProvider provider) {
     if (provider.isLoading) {
-      return StateView.loading(message: "Ranking papers…");
+      return StateView.loading(message: context.s.rankingPapers);
     }
     if (provider.errorMessage.isNotEmpty) {
       return StateView.error(
         provider.errorMessage,
+        title: context.s.somethingWentWrong,
+        retryLabel: context.s.tryAgain,
         onRetry: () => provider.search(provider.currentTopic),
       );
     }
@@ -46,8 +49,8 @@ class TopPaperScreen extends StatelessWidget {
     if (papers.isEmpty) {
       return StateView.empty(
         icon: Icons.article_rounded,
-        title: "No papers found",
-        message: "Search a topic to discover its most cited papers.",
+        title: context.s.noPapersTitle,
+        message: context.s.noPapersMessage,
       );
     }
 
@@ -102,7 +105,8 @@ class TopPaperScreen extends StatelessWidget {
                         const SizedBox(width: 8),
                         MetaChip(
                             icon: Icons.format_quote_rounded,
-                            label: "${_compact(paper.citationCount)} cites",
+                            label: context.s
+                                .citesBadge(_compact(paper.citationCount)),
                             color: AppColors.primary),
                       ],
                     ),

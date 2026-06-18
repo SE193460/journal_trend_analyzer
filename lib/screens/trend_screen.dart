@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 
+import '../l10n/locale_provider.dart';
 import '../providers/publication_provider.dart';
 import '../models/publication.dart';
 import '../theme/app_theme.dart';
@@ -29,10 +30,10 @@ class _TrendScreenState extends State<TrendScreen> {
       body: Column(
         children: [
           BrandedHeader(
-            title: "Publication Trend",
+            title: context.s.trendTitle,
             subtitle: provider.currentTopic.isNotEmpty
-                ? "Research trend for “${provider.currentTopic}”"
-                : "Papers published by year",
+                ? context.s.trendSubtitleForTopic(provider.currentTopic)
+                : context.s.trendSubtitleDefault,
             icon: Icons.trending_up_rounded,
           ),
           Expanded(child: _buildBody(provider)),
@@ -43,11 +44,13 @@ class _TrendScreenState extends State<TrendScreen> {
 
   Widget _buildBody(PublicationProvider provider) {
     if (provider.isLoading) {
-      return StateView.loading(message: "Loading trend data…");
+      return StateView.loading(message: context.s.loadingTrend);
     }
     if (provider.errorMessage.isNotEmpty) {
       return StateView.error(
         provider.errorMessage,
+        title: context.s.somethingWentWrong,
+        retryLabel: context.s.tryAgain,
         onRetry: () => provider.search(provider.currentTopic),
       );
     }
@@ -60,8 +63,8 @@ class _TrendScreenState extends State<TrendScreen> {
     if (baseData.isEmpty) {
       return StateView.empty(
         icon: Icons.show_chart_rounded,
-        title: "No trend data",
-        message: "Search a topic to see how publications evolved over time.",
+        title: context.s.noTrendTitle,
+        message: context.s.noTrendMessage,
       );
     }
 
@@ -106,17 +109,17 @@ class _TrendScreenState extends State<TrendScreen> {
     final yearRange = firstYear == lastYear ? "$firstYear" : "$firstYear–$lastYear";
 
     String insightText =
-        "Publication activity peaked in $peakYear with ${_compact(maxCount)} papers.";
+        context.s.insightPeak(peakYear, _compact(maxCount));
     if (trendData.isNotEmpty && firstYear != lastYear) {
       final firstCount = trendData.first.count;
       final lastCount = trendData.last.count;
       if (lastCount > firstCount && lastYear > peakYear - 2) {
-        insightText += " Research activity has generally increased over time.";
+        insightText += context.s.insightIncreased;
       } else if (lastCount < maxCount && lastYear > peakYear) {
-        insightText += " Research activity declined after its peak.";
+        insightText += context.s.insightDeclined;
       }
     } else if (trendData.isEmpty) {
-      insightText = "No data available for the selected range.";
+      insightText = context.s.insightNoRange;
     }
 
     return SingleChildScrollView(
@@ -131,10 +134,10 @@ class _TrendScreenState extends State<TrendScreen> {
           if (spots.isNotEmpty)
             _buildChartCard(spots, firstYear, lastYear, maxCount)
           else
-            const SectionCard(
+            SectionCard(
               child: Center(
-                child: Text("No data in this range.",
-                    style: TextStyle(color: AppColors.muted)),
+                child: Text(context.s.noDataInRange,
+                    style: const TextStyle(color: AppColors.muted)),
               ),
             ),
           const SizedBox(height: 16),
@@ -153,8 +156,8 @@ class _TrendScreenState extends State<TrendScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Filter by year",
-                  style: TextStyle(
+              Text(context.s.filterByYear,
+                  style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
                       color: AppColors.ink)),
@@ -207,15 +210,15 @@ class _TrendScreenState extends State<TrendScreen> {
     return Row(
       children: [
         Expanded(
-            child: _statCard("Total Papers", _compact(total),
+            child: _statCard(context.s.statTotalPapers, _compact(total),
                 Icons.description_rounded, AppColors.primary)),
         const SizedBox(width: 12),
         Expanded(
-            child: _statCard("Peak Year", "$peakYear",
+            child: _statCard(context.s.statPeakYear, "$peakYear",
                 Icons.local_fire_department_rounded, AppColors.amber)),
         const SizedBox(width: 12),
         Expanded(
-            child: _statCard("Year Range", range,
+            child: _statCard(context.s.statYearRange, range,
                 Icons.date_range_rounded, AppColors.sky)),
       ],
     );
@@ -255,8 +258,8 @@ class _TrendScreenState extends State<TrendScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionTitle(
-              title: "Papers by publication year",
+          SectionTitle(
+              title: context.s.papersByPublicationYear,
               icon: Icons.stacked_line_chart_rounded),
           const SizedBox(height: 24),
           SizedBox(
@@ -346,7 +349,8 @@ class _TrendScreenState extends State<TrendScreen> {
                     getTooltipColor: (_) => AppColors.ink,
                     getTooltipItems: (touchedSpots) => touchedSpots
                         .map((spot) => LineTooltipItem(
-                              "${spot.x.toInt()} · ${_compact(spot.y.toInt())} papers",
+                              context.s.chartPapersTooltip(
+                                  spot.x.toInt(), _compact(spot.y.toInt())),
                               const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold),
@@ -386,8 +390,8 @@ class _TrendScreenState extends State<TrendScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Insight",
-                    style: TextStyle(
+                Text(context.s.insight,
+                    style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         color: AppColors.primary,
                         fontSize: 13)),

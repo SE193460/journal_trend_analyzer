@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/locale_provider.dart';
 import '../providers/publication_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
@@ -28,19 +29,18 @@ class TopJournalScreen extends StatelessWidget {
       body: Column(
         children: [
           BrandedHeader(
-            title: "Top Journals",
+            title: context.s.topJournalsTitle,
             subtitle: provider.currentTopic.isNotEmpty
-                ? "Most active journals for “${provider.currentTopic}”"
-                : "Journals ranked by publications",
+                ? context.s.topJournalsSubtitleForTopic(provider.currentTopic)
+                : context.s.topJournalsSubtitleDefault,
             icon: Icons.menu_book_rounded,
           ),
           Expanded(
             child: sorted.isEmpty
                 ? StateView.empty(
                     icon: Icons.menu_book_rounded,
-                    title: "No journals yet",
-                    message:
-                        "Search a topic first to rank journals by publication count.",
+                    title: context.s.noJournalsTitle,
+                    message: context.s.noJournalsMessage,
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
@@ -49,7 +49,7 @@ class TopJournalScreen extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final entry = sorted[index];
                       return _journalCard(
-                          index + 1, entry.key, entry.value, maxCount);
+                          context, index + 1, entry.key, entry.value, maxCount);
                     },
                   ),
           ),
@@ -58,7 +58,8 @@ class TopJournalScreen extends StatelessWidget {
     );
   }
 
-  Widget _journalCard(int rank, String name, int count, int maxCount) {
+  Widget _journalCard(
+      BuildContext context, int rank, String name, int count, int maxCount) {
     final ratio = (count / maxCount).clamp(0.05, 1.0);
     return SectionCard(
       padding: const EdgeInsets.all(14),
@@ -100,8 +101,8 @@ class TopJournalScreen extends StatelessWidget {
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                       color: AppColors.primary)),
-              const Text("papers",
-                  style: TextStyle(fontSize: 11, color: AppColors.muted)),
+              Text(context.s.papersUnit,
+                  style: const TextStyle(fontSize: 11, color: AppColors.muted)),
             ],
           ),
         ],

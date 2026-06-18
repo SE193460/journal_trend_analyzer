@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'l10n/locale_provider.dart';
 import 'providers/publication_provider.dart';
-import 'screens/search_screen.dart';
+import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => PublicationProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => PublicationProvider()),
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -21,9 +25,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: "Journal Trend Analyzer",
+      title: context.s.appTitle,
       theme: AppTheme.light(),
-      home: const SearchScreen(),
+      home: const SplashScreen(),
     );
   }
 }

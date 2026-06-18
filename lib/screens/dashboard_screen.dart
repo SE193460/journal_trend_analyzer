@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/locale_provider.dart';
 import '../providers/publication_provider.dart';
 import '../models/dashboard_summary.dart';
 import '../theme/app_theme.dart';
@@ -22,10 +23,10 @@ class DashboardScreen extends StatelessWidget {
       body: Column(
         children: [
           BrandedHeader(
-            title: "Research Dashboard",
+            title: context.s.dashboardTitle,
             subtitle: provider.currentTopic.isNotEmpty
-                ? "Key insights for “${provider.currentTopic}”"
-                : "Key research insights",
+                ? context.s.dashboardSubtitleForTopic(provider.currentTopic)
+                : context.s.dashboardSubtitleDefault,
             icon: Icons.dashboard_rounded,
           ),
           Expanded(child: _buildBody(context, provider)),
@@ -53,6 +54,8 @@ class DashboardScreen extends StatelessWidget {
     if (provider.errorMessage.isNotEmpty) {
       return StateView.error(
         provider.errorMessage,
+        title: context.s.somethingWentWrong,
+        retryLabel: context.s.tryAgain,
         onRetry: () => provider.search(provider.currentTopic),
       );
     }
@@ -61,8 +64,8 @@ class DashboardScreen extends StatelessWidget {
     if (summary == null) {
       return StateView.empty(
         icon: Icons.insights_rounded,
-        title: "No dashboard yet",
-        message: "Search for a topic to see key research insights.",
+        title: context.s.noDashboardTitle,
+        message: context.s.noDashboardMessage,
       );
     }
 
@@ -71,9 +74,9 @@ class DashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildKPIGrid(summary),
+          _buildKPIGrid(context, summary),
           const SizedBox(height: 16),
-          _buildMiniTrendChart(summary),
+          _buildMiniTrendChart(context, summary),
           const SizedBox(height: 16),
           _buildMostInfluentialCard(context, summary),
         ],
@@ -83,46 +86,47 @@ class DashboardScreen extends StatelessWidget {
 
   // ─── KPI Grid ────────────────────────────────────────────
 
-  Widget _buildKPIGrid(ResearchDashboardSummary summary) {
+  Widget _buildKPIGrid(BuildContext context, ResearchDashboardSummary summary) {
     final totalText = _formatNumber(summary.totalPublications);
     final avgText = summary.averageCitationCount.toStringAsFixed(1);
-    final yearText =
-        summary.mostActiveYear != null ? "${summary.mostActiveYear}" : "N/A";
-    final journalText = summary.topJournal ?? "N/A";
-    final authorText = summary.topAuthor ?? "N/A";
+    final yearText = summary.mostActiveYear != null
+        ? "${summary.mostActiveYear}"
+        : context.s.notAvailable;
+    final journalText = summary.topJournal ?? context.s.notAvailable;
+    final authorText = summary.topAuthor ?? context.s.notAvailable;
 
     return Column(
       children: [
         Row(
           children: [
             Expanded(
-                child: _kpiCard("Total Papers", totalText,
+                child: _kpiCard(context.s.kpiTotalPapers, totalText,
                     Icons.description_rounded, AppColors.primary)),
             const SizedBox(width: 12),
             Expanded(
-                child: _kpiCard("Avg Citations*", avgText, Icons.star_rounded,
-                    AppColors.amber)),
+                child: _kpiCard(context.s.kpiAvgCitations, avgText,
+                    Icons.star_rounded, AppColors.amber)),
           ],
         ),
         const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
-                child: _kpiCard("Most Active Year", yearText,
+                child: _kpiCard(context.s.kpiMostActiveYear, yearText,
                     Icons.calendar_today_rounded, AppColors.emerald)),
             const SizedBox(width: 12),
             Expanded(
-                child: _kpiCard("Top Author", authorText, Icons.person_rounded,
-                    AppColors.violet)),
+                child: _kpiCard(context.s.kpiTopAuthor, authorText,
+                    Icons.person_rounded, AppColors.violet)),
           ],
         ),
         const SizedBox(height: 12),
-        _wideKpiCard(
-            "Top Journal", journalText, Icons.menu_book_rounded, AppColors.indigo),
+        _wideKpiCard(context.s.kpiTopJournal, journalText,
+            Icons.menu_book_rounded, AppColors.indigo),
         const SizedBox(height: 8),
-        const Text(
-          "* Average citations calculated from top 200 sampled papers",
-          style: TextStyle(
+        Text(
+          context.s.avgCitationsFootnote,
+          style: const TextStyle(
               fontSize: 11, color: AppColors.faint, fontStyle: FontStyle.italic),
         ),
       ],
@@ -201,17 +205,18 @@ class DashboardScreen extends StatelessWidget {
 
   // ─── Mini Trend Chart ────────────────────────────────────
 
-  Widget _buildMiniTrendChart(ResearchDashboardSummary summary) {
+  Widget _buildMiniTrendChart(
+      BuildContext context, ResearchDashboardSummary summary) {
     final trendData = summary.publicationTrend
         .where((t) => t.year >= 1900 && t.year <= DateTime.now().year)
         .toList()
       ..sort((a, b) => a.year.compareTo(b.year));
 
     if (trendData.isEmpty) {
-      return const SectionCard(
+      return SectionCard(
         child: Center(
-            child: Text("No trend data available.",
-                style: TextStyle(color: AppColors.muted))),
+            child: Text(context.s.noTrendDataAvailable,
+                style: const TextStyle(color: AppColors.muted))),
       );
     }
 
@@ -226,14 +231,14 @@ class DashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionTitle(
-              title: "Publication Trend",
+          SectionTitle(
+              title: context.s.publicationTrend,
               icon: Icons.show_chart_rounded),
           const SizedBox(height: 4),
-          const Padding(
-            padding: EdgeInsets.only(left: 38),
-            child: Text("Papers published per year",
-                style: TextStyle(fontSize: 12.5, color: AppColors.muted)),
+          Padding(
+            padding: const EdgeInsets.only(left: 38),
+            child: Text(context.s.papersPublishedPerYear,
+                style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -314,7 +319,8 @@ class DashboardScreen extends StatelessWidget {
                     getTooltipColor: (_) => AppColors.ink,
                     getTooltipItems: (touchedSpots) => touchedSpots
                         .map((spot) => LineTooltipItem(
-                              "${spot.x.toInt()} · ${_formatNumber(spot.y.toInt())} papers",
+                              context.s.chartPapersTooltip(spot.x.toInt(),
+                                  _formatNumber(spot.y.toInt())),
                               const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -337,26 +343,26 @@ class DashboardScreen extends StatelessWidget {
       BuildContext context, ResearchDashboardSummary summary) {
     final paper = summary.mostInfluentialPaper;
     if (paper == null) {
-      return const SectionCard(
+      return SectionCard(
         child: Center(
-            child: Text("No influential paper data available.",
-                style: TextStyle(color: AppColors.muted))),
+            child: Text(context.s.noInfluentialData,
+                style: const TextStyle(color: AppColors.muted))),
       );
     }
 
     final authorsText = paper.authors.isNotEmpty
         ? paper.authors.take(3).join(", ") +
             (paper.authors.length > 3
-                ? " +${paper.authors.length - 3} more"
+                ? context.s.andMore(paper.authors.length - 3)
                 : "")
-        : "Unknown authors";
+        : context.s.unknownAuthors;
 
     return SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionTitle(
-              title: "Most Influential Paper",
+          SectionTitle(
+              title: context.s.mostInfluentialPaper,
               icon: Icons.emoji_events_rounded,
               color: AppColors.amber),
           const SizedBox(height: 16),
@@ -371,7 +377,8 @@ class DashboardScreen extends StatelessWidget {
             children: [
               MetaChip(
                   icon: Icons.format_quote_rounded,
-                  label: "${_formatNumber(paper.citationCount)} Citations",
+                  label: context.s
+                      .citationsCount(_formatNumber(paper.citationCount)),
                   color: AppColors.primary),
               const SizedBox(width: 10),
               MetaChip(
@@ -410,7 +417,7 @@ class DashboardScreen extends StatelessWidget {
                       MaterialPageRoute(
                           builder: (_) => DetailScreen(publication: paper))),
                   icon: const Icon(Icons.visibility_rounded, size: 18),
-                  label: const Text("Details"),
+                  label: Text(context.s.detailsButton),
                 ),
               ),
               if (paper.doi.isNotEmpty) ...[
@@ -425,7 +432,7 @@ class DashboardScreen extends StatelessWidget {
                       }
                     },
                     icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                    label: const Text("View Paper"),
+                    label: Text(context.s.viewPaperButton),
                   ),
                 ),
               ],

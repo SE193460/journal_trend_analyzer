@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/locale_provider.dart';
 import '../models/publication.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
@@ -28,11 +29,11 @@ class DetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Publication"),
+        title: Text(context.s.detailAppBarTitle),
         actions: [
           if (p.doi.isNotEmpty)
             IconButton(
-              tooltip: "Open paper",
+              tooltip: context.s.openPaperTooltip,
               icon: const Icon(Icons.open_in_new_rounded, size: 20),
               onPressed: () => _launchUrl(p.doi),
             ),
@@ -41,18 +42,18 @@ class DetailScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
-          _buildHero(p),
+          _buildHero(context, p),
           const SizedBox(height: 16),
-          _buildOverview(p),
+          _buildOverview(context, p),
           const SizedBox(height: 16),
-          _buildMetrics(p),
+          _buildMetrics(context, p),
           const SizedBox(height: 16),
-          _buildTaxonomy(p),
+          _buildTaxonomy(context, p),
           const SizedBox(height: 16),
-          _buildAccessAndFunding(p),
+          _buildAccessAndFunding(context, p),
           if (p.abstractText.isNotEmpty) ...[
             const SizedBox(height: 16),
-            _buildAbstract(p),
+            _buildAbstract(context, p),
           ],
         ],
       ),
@@ -61,13 +62,13 @@ class DetailScreen extends StatelessWidget {
 
   // ─── Hero ────────────────────────────────────────────────
 
-  Widget _buildHero(Publication p) {
+  Widget _buildHero(BuildContext context, Publication p) {
     return SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            p.title.isNotEmpty ? p.title : "Untitled work",
+            p.title.isNotEmpty ? p.title : context.s.untitledWork,
             style: const TextStyle(
               fontSize: 21,
               fontWeight: FontWeight.w800,
@@ -87,7 +88,7 @@ class DetailScreen extends StatelessWidget {
                     color: AppColors.emerald),
               MetaChip(
                   icon: Icons.format_quote_rounded,
-                  label: "${_compact(p.citationCount)} citations",
+                  label: context.s.citationsChip(_compact(p.citationCount)),
                   color: AppColors.primary),
               if (p.type.isNotEmpty)
                 MetaChip(
@@ -108,7 +109,7 @@ class DetailScreen extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () => _launchUrl(p.doi),
                 icon: const Icon(Icons.description_rounded, size: 18),
-                label: const Text("Read full paper"),
+                label: Text(context.s.readFullPaper),
               ),
             ),
           ],
@@ -119,53 +120,60 @@ class DetailScreen extends StatelessWidget {
 
   // ─── Sections ────────────────────────────────────────────
 
-  Widget _buildOverview(Publication p) {
-    return _group("Overview", Icons.info_outline_rounded, [
-      _kv("Source", p.journal.isNotEmpty ? p.journal : "N/A",
+  Widget _buildOverview(BuildContext context, Publication p) {
+    final na = context.s.notAvailable;
+    return _group(context.s.sectionOverview, Icons.info_outline_rounded, [
+      _kv(context.s.fieldSource, p.journal.isNotEmpty ? p.journal : na,
           highlight: p.journal.isNotEmpty),
-      _kvExpandable("Authors", p.authors),
-      _kvExpandable("Institutions", p.institutions),
-      _kv("Language", p.language.isNotEmpty ? p.language : "N/A"),
+      _kvExpandable(context.s.fieldAuthors, p.authors),
+      _kvExpandable(context.s.fieldInstitutions, p.institutions),
+      _kv(context.s.fieldLanguage, p.language.isNotEmpty ? p.language : na),
     ]);
   }
 
-  Widget _buildMetrics(Publication p) {
-    return _group("Citations & metrics", Icons.insights_rounded, [
-      _kv("FWCI", p.fwci > 0 ? p.fwci.toString() : "N/A"),
-      _kv("References", p.cites > 0 ? "${p.cites}" : "0"),
-      _kv("Cited by", "${p.citationCount}", highlight: true),
-      _kv("Related works", "${p.relatedTo}"),
+  Widget _buildMetrics(BuildContext context, Publication p) {
+    final na = context.s.notAvailable;
+    return _group(context.s.sectionMetrics, Icons.insights_rounded, [
+      _kv(context.s.fieldFwci, p.fwci > 0 ? p.fwci.toString() : na),
+      _kv(context.s.fieldReferences, p.cites > 0 ? "${p.cites}" : "0"),
+      _kv(context.s.fieldCitedBy, "${p.citationCount}", highlight: true),
+      _kv(context.s.fieldRelatedWorks, "${p.relatedTo}"),
       if (p.doi.isNotEmpty)
-        _kv("DOI", p.doi, highlight: true, onTap: () => _launchUrl(p.doi)),
+        _kv(context.s.fieldDoi, p.doi,
+            highlight: true, onTap: () => _launchUrl(p.doi)),
     ]);
   }
 
-  Widget _buildTaxonomy(Publication p) {
-    return _group("Topic taxonomy", Icons.account_tree_rounded, [
-      _kv("Topic", p.topic.isNotEmpty ? p.topic : "N/A", highlight: true),
-      _kv("Subfield", p.subfield.isNotEmpty ? p.subfield : "N/A"),
-      _kv("Field", p.field.isNotEmpty ? p.field : "N/A"),
-      _kv("Domain", p.domain.isNotEmpty ? p.domain : "N/A"),
-      _kv("SDG", p.sdg.isNotEmpty ? p.sdg : "N/A"),
+  Widget _buildTaxonomy(BuildContext context, Publication p) {
+    final na = context.s.notAvailable;
+    return _group(context.s.sectionTaxonomy, Icons.account_tree_rounded, [
+      _kv(context.s.fieldTopic, p.topic.isNotEmpty ? p.topic : na,
+          highlight: true),
+      _kv(context.s.fieldSubfield, p.subfield.isNotEmpty ? p.subfield : na),
+      _kv(context.s.fieldField, p.field.isNotEmpty ? p.field : na),
+      _kv(context.s.fieldDomain, p.domain.isNotEmpty ? p.domain : na),
+      _kv(context.s.fieldSdg, p.sdg.isNotEmpty ? p.sdg : na),
     ]);
   }
 
-  Widget _buildAccessAndFunding(Publication p) {
-    return _group("Access & funding", Icons.volunteer_activism_rounded, [
-      _kv("Open access",
-          p.openAccessStatus.isNotEmpty ? p.openAccessStatus : "N/A"),
-      _kvExpandable("Funders", p.funders),
-      _kvExpandable("Awards", p.awards),
+  Widget _buildAccessAndFunding(BuildContext context, Publication p) {
+    final na = context.s.notAvailable;
+    return _group(
+        context.s.sectionAccessFunding, Icons.volunteer_activism_rounded, [
+      _kv(context.s.fieldOpenAccess,
+          p.openAccessStatus.isNotEmpty ? p.openAccessStatus : na),
+      _kvExpandable(context.s.fieldFunders, p.funders),
+      _kvExpandable(context.s.fieldAwards, p.awards),
     ]);
   }
 
-  Widget _buildAbstract(Publication p) {
+  Widget _buildAbstract(BuildContext context, Publication p) {
     return SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionTitle(
-              title: "Abstract", icon: Icons.notes_rounded),
+          SectionTitle(
+              title: context.s.sectionAbstract, icon: Icons.notes_rounded),
           const SizedBox(height: 12),
           Text(
             p.abstractText,
@@ -287,7 +295,7 @@ class _ExpandableValueState extends State<ExpandableValue> {
         fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary);
 
     if (widget.items.isEmpty) {
-      return const Text("N/A", style: valueStyle);
+      return Text(context.s.notAvailable, style: valueStyle);
     }
 
     final canToggle = widget.items.length > widget.maxItemsToShow;
@@ -302,8 +310,8 @@ class _ExpandableValueState extends State<ExpandableValue> {
       spans.add(const TextSpan(text: "  "));
       spans.add(TextSpan(
         text: _expanded
-            ? "Show less"
-            : "+${widget.items.length - widget.maxItemsToShow} more",
+            ? context.s.showLess
+            : context.s.plusMore(widget.items.length - widget.maxItemsToShow),
         style: linkStyle,
       ));
     }

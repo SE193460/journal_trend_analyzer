@@ -286,7 +286,12 @@ class StateView {
     );
   }
 
-  static Widget error(String message, {VoidCallback? onRetry}) {
+  static Widget error(
+    String message, {
+    VoidCallback? onRetry,
+    String title = "Something went wrong",
+    String retryLabel = "Try again",
+  }) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -303,9 +308,10 @@ class StateView {
                   size: 40, color: AppColors.danger),
             ),
             const SizedBox(height: 20),
-            const Text(
-              "Something went wrong",
-              style: TextStyle(
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: AppColors.ink,
@@ -322,7 +328,7 @@ class StateView {
               ElevatedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text("Try again"),
+                label: Text(retryLabel),
               ),
             ],
           ],

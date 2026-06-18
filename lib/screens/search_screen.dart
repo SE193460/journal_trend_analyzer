@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/locale_provider.dart';
 import '../providers/publication_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
+import '../widgets/language_toggle.dart';
 import '../widgets/publication_card.dart';
 
 import 'trend_screen.dart';
@@ -32,7 +34,7 @@ class _SearchScreenState extends State<SearchScreen> {
   void _onSearch() {
     if (_controller.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a research topic")),
+        SnackBar(content: Text(context.s.enterTopicWarning)),
       );
       return;
     }
@@ -62,10 +64,12 @@ class _SearchScreenState extends State<SearchScreen> {
           _buildHeader(),
           Expanded(
             child: provider.isLoading
-                ? StateView.loading(message: "Analyzing publications…")
+                ? StateView.loading(message: context.s.analyzingPublications)
                 : provider.errorMessage.isNotEmpty
                     ? StateView.error(
                         provider.errorMessage,
+                        title: context.s.somethingWentWrong,
+                        retryLabel: context.s.tryAgain,
                         onRetry: () => provider.search(provider.currentTopic),
                       )
                     : provider.publications.isEmpty
@@ -88,11 +92,15 @@ class _SearchScreenState extends State<SearchScreen> {
         children: [
           Container(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            height: 180,
+            // Min height keeps the original look at normal font sizes but
+            // lets the header grow (instead of overflowing) when the status
+            // bar inset or large Android fonts make the content taller.
+            constraints: const BoxConstraints(minHeight: 180),
             decoration: const BoxDecoration(gradient: AppGradients.brand),
             child: SafeArea(
               bottom: false,
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -106,13 +114,20 @@ class _SearchScreenState extends State<SearchScreen> {
                         color: Colors.white, size: 30),
                   ),
                   const SizedBox(height: 14),
-                  const Text(
-                    "Journal Trend\nAnalyzer",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      height: 1.15,
+                  // Keep the title on a single row; FittedBox scales it down
+                  // to fit narrow screens instead of wrapping or overflowing.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      context.s.appTitle,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        height: 1.15,
+                      ),
                     ),
                   ),
                 ],
@@ -120,21 +135,36 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          _drawerTile(Icons.search_rounded, "Search", () => _goTo(0)),
-          _drawerTile(Icons.trending_up_rounded, "Trend Analysis", () => _goTo(1)),
-          _drawerTile(Icons.article_rounded, "Top Papers", () => _goTo(2)),
-          _drawerTile(Icons.dashboard_rounded, "Dashboard", () => _goTo(3)),
+          _drawerTile(Icons.search_rounded, context.s.navSearch, () => _goTo(0)),
+          _drawerTile(Icons.trending_up_rounded, context.s.menuTrendAnalysis,
+              () => _goTo(1)),
+          _drawerTile(
+              Icons.article_rounded, context.s.menuTopPapers, () => _goTo(2)),
+          _drawerTile(
+              Icons.dashboard_rounded, context.s.menuDashboard, () => _goTo(3)),
           const Divider(indent: 16, endIndent: 16),
-          _drawerTile(Icons.menu_book_rounded, "Top Journals", () {
+          _drawerTile(Icons.menu_book_rounded, context.s.menuTopJournals, () {
             Navigator.pop(context);
             Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const TopJournalScreen()));
           }),
-          _drawerTile(Icons.people_alt_rounded, "Top Authors", () {
+          _drawerTile(Icons.people_alt_rounded, context.s.menuTopAuthors, () {
             Navigator.pop(context);
             Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const TopAuthorScreen()));
           }),
+          const Divider(indent: 16, endIndent: 16),
+          // Language section — the EN/VI switch lives here under the menu.
+          ListTile(
+            leading:
+                const Icon(Icons.language_rounded, color: AppColors.primary),
+            title: Text(
+              context.s.languageMenu,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w600, color: AppColors.body),
+            ),
+            trailing: const LanguageToggle(onDark: false),
+          ),
         ],
       ),
     );
@@ -182,15 +212,18 @@ class _SearchScreenState extends State<SearchScreen> {
       child: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
-        items: const [
+        items: [
           BottomNavigationBarItem(
-              icon: Icon(Icons.search_rounded), label: "Search"),
+              icon: const Icon(Icons.search_rounded), label: context.s.navSearch),
           BottomNavigationBarItem(
-              icon: Icon(Icons.trending_up_rounded), label: "Trends"),
+              icon: const Icon(Icons.trending_up_rounded),
+              label: context.s.navTrendsShort),
           BottomNavigationBarItem(
-              icon: Icon(Icons.article_rounded), label: "Papers"),
+              icon: const Icon(Icons.article_rounded),
+              label: context.s.navPapersShort),
           BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_rounded), label: "Dashboard"),
+              icon: const Icon(Icons.dashboard_rounded),
+              label: context.s.navDashboardShort),
         ],
       ),
     );
@@ -233,23 +266,24 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                   ),
                   const SizedBox(width: 14),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Journal Trend Analyzer",
-                          style: TextStyle(
+                          context.s.appTitle,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 21,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -0.4,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          "Explore research trends with OpenAlex",
-                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                          context.s.searchHeaderSubtitle,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
                         ),
                       ],
                     ),
@@ -286,7 +320,7 @@ class _SearchScreenState extends State<SearchScreen> {
         onSubmitted: (_) => _onSearch(),
         style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
-          hintText: "Search a research topic…",
+          hintText: context.s.searchHint,
           hintStyle: const TextStyle(color: AppColors.faint),
           prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary),
           suffixIcon: Padding(
@@ -321,28 +355,36 @@ class _SearchScreenState extends State<SearchScreen> {
       "Blockchain",
       "IoT",
     ];
+    // Grow the strip with the system text scale so chips never overflow
+    // their bounds on small Android screens with large fonts.
+    final chipHeight =
+        MediaQuery.textScalerOf(context).scale(34).clamp(34.0, 52.0);
     return SizedBox(
-      height: 34,
+      height: chipHeight,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: topics.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
-          return Material(
-            color: Colors.white.withValues(alpha: 0.22),
-            borderRadius: BorderRadius.circular(20),
-            child: InkWell(
+          // Center keeps each chip at its natural size instead of
+          // stretching it to fill the (taller) cross-axis height.
+          return Center(
+            child: Material(
+              color: Colors.white.withValues(alpha: 0.22),
               borderRadius: BorderRadius.circular(20),
-              onTap: () => _onChipTapped(topics[i]),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                child: Text(
-                  topics[i],
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => _onChipTapped(topics[i]),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  child: Text(
+                    topics[i],
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -373,19 +415,20 @@ class _SearchScreenState extends State<SearchScreen> {
                   size: 48, color: AppColors.primary),
             ),
             const SizedBox(height: 18),
-            const Text(
-              "Start exploring research",
-              style: TextStyle(
+            Text(
+              context.s.emptyStateTitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
                 fontSize: 19,
                 fontWeight: FontWeight.w800,
                 color: AppColors.ink,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              "Search a topic to analyze publications, citations, journals and authors.",
+            Text(
+              context.s.emptyStateMessage,
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.muted, height: 1.4),
+              style: const TextStyle(color: AppColors.muted, height: 1.4),
             ),
             const SizedBox(height: 32),
             _buildFeatureShortcuts(),
@@ -397,24 +440,24 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildFeatureShortcuts() {
     final items = [
-      _Shortcut("Trend Analysis", Icons.trending_up_rounded, AppColors.primary,
-          () => const TrendScreen()),
-      _Shortcut("Top Papers", Icons.article_rounded, AppColors.indigo,
-          () => const TopPaperScreen()),
-      _Shortcut("Top Journals", Icons.menu_book_rounded, AppColors.emerald,
-          () => const TopJournalScreen()),
-      _Shortcut("Top Authors", Icons.people_alt_rounded, AppColors.violet,
-          () => const TopAuthorScreen()),
-      _Shortcut("Dashboard", Icons.dashboard_rounded, AppColors.sky,
+      _Shortcut(context.s.menuTrendAnalysis, Icons.trending_up_rounded,
+          AppColors.primary, () => const TrendScreen()),
+      _Shortcut(context.s.menuTopPapers, Icons.article_rounded,
+          AppColors.indigo, () => const TopPaperScreen()),
+      _Shortcut(context.s.menuTopJournals, Icons.menu_book_rounded,
+          AppColors.emerald, () => const TopJournalScreen()),
+      _Shortcut(context.s.menuTopAuthors, Icons.people_alt_rounded,
+          AppColors.violet, () => const TopAuthorScreen()),
+      _Shortcut(context.s.menuDashboard, Icons.dashboard_rounded, AppColors.sky,
           () => const DashboardScreen()),
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Explore insights",
-          style: TextStyle(
+        Text(
+          context.s.exploreInsights,
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: AppColors.ink,
@@ -486,7 +529,8 @@ class _SearchScreenState extends State<SearchScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
           child: Text(
-            "${provider.publications.length} results for “${provider.currentTopic}”",
+            context.s.resultsFor(
+                provider.publications.length, provider.currentTopic),
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
