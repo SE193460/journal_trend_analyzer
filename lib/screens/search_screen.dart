@@ -59,6 +59,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
+      drawer: _buildDrawer(),
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -75,6 +76,65 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
       ),
       bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          const DrawerHeader(
+            decoration: BoxDecoration(color: Colors.deepPurple),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Icon(Icons.analytics, color: Colors.white, size: 48),
+                SizedBox(height: 16),
+                Text("Features Menu", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.search, color: Colors.deepPurple),
+            title: const Text("Search"),
+            onTap: () { Navigator.pop(context); setState(() => _currentIndex = 0); },
+          ),
+          ListTile(
+            leading: const Icon(Icons.trending_up, color: Colors.deepPurple),
+            title: const Text("Trend Analysis"),
+            onTap: () { Navigator.pop(context); setState(() => _currentIndex = 1); },
+          ),
+          ListTile(
+            leading: const Icon(Icons.article, color: Colors.deepPurple),
+            title: const Text("Top Papers"),
+            onTap: () { Navigator.pop(context); setState(() => _currentIndex = 2); },
+          ),
+          ListTile(
+            leading: const Icon(Icons.dashboard, color: Colors.deepPurple),
+            title: const Text("Dashboard"),
+            onTap: () { Navigator.pop(context); setState(() => _currentIndex = 3); },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.book, color: Colors.deepPurple),
+            title: const Text("Top Journals"),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const TopJournalScreen()));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.person, color: Colors.deepPurple),
+            title: const Text("Top Authors"),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const TopAuthorScreen()));
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -121,7 +181,14 @@ class _SearchScreenState extends State<SearchScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.analytics, color: Colors.white, size: 32),
+              Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu, color: Colors.white, size: 32),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
               const SizedBox(width: 10),
               const Expanded(
                 child: Text(

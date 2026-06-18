@@ -10,31 +10,20 @@ class TopAuthorScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     var provider = Provider.of<PublicationProvider>(context);
 
-    Map<String, int> authors = {};
-
-    for (var p in provider.publications) {
-      for (var author in p.authors) {
-        if (author.isNotEmpty) {
-          authors[author] = (authors[author] ?? 0) + 1;
-        }
-      }
-    }
-
-    var sortedAuthors = authors.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    var authorsData = provider.topAuthors;
 
     return Scaffold(
       appBar: AppBar(
         title: Text("Top Authors"),
       ),
       body: ListView.builder(
-        itemCount: sortedAuthors.length,
+        itemCount: authorsData.length,
         itemBuilder: (context, index) {
-          var entry = sortedAuthors[index];
+          var entry = authorsData[index];
           return ListTile(
             leading: Text("${index + 1}"),
-            title: Text(entry.key),
-            trailing: Text("${entry.value} papers"),
+            title: Text(entry['name']),
+            trailing: Text("${entry['count']} papers"),
           );
         },
       ),
