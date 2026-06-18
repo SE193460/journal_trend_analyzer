@@ -85,7 +85,7 @@ class _SearchScreenState extends State<SearchScreen> {
         padding: EdgeInsets.zero,
         children: [
           const DrawerHeader(
-            decoration: BoxDecoration(color: Colors.deepPurple),
+            decoration: BoxDecoration(color: Color(0xFFF48FB1)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
@@ -97,28 +97,28 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.search, color: Colors.deepPurple),
+            leading: const Icon(Icons.search, color: Color(0xFFF48FB1)),
             title: const Text("Search"),
             onTap: () { Navigator.pop(context); setState(() => _currentIndex = 0); },
           ),
           ListTile(
-            leading: const Icon(Icons.trending_up, color: Colors.deepPurple),
+            leading: const Icon(Icons.trending_up, color: Color(0xFFF48FB1)),
             title: const Text("Trend Analysis"),
             onTap: () { Navigator.pop(context); setState(() => _currentIndex = 1); },
           ),
           ListTile(
-            leading: const Icon(Icons.article, color: Colors.deepPurple),
+            leading: const Icon(Icons.article, color: Color(0xFFF48FB1)),
             title: const Text("Top Papers"),
             onTap: () { Navigator.pop(context); setState(() => _currentIndex = 2); },
           ),
           ListTile(
-            leading: const Icon(Icons.dashboard, color: Colors.deepPurple),
+            leading: const Icon(Icons.dashboard, color: Color(0xFFF48FB1)),
             title: const Text("Dashboard"),
             onTap: () { Navigator.pop(context); setState(() => _currentIndex = 3); },
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.book, color: Colors.deepPurple),
+            leading: const Icon(Icons.book, color: Color(0xFFF48FB1)),
             title: const Text("Top Journals"),
             onTap: () {
               Navigator.pop(context);
@@ -126,7 +126,7 @@ class _SearchScreenState extends State<SearchScreen> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.person, color: Colors.deepPurple),
+            leading: const Icon(Icons.person, color: Color(0xFFF48FB1)),
             title: const Text("Top Authors"),
             onTap: () {
               Navigator.pop(context);
@@ -154,7 +154,7 @@ class _SearchScreenState extends State<SearchScreen> {
         });
       },
       type: BottomNavigationBarType.fixed,
-      selectedItemColor: Colors.deepPurple,
+      selectedItemColor: Color(0xFFF48FB1),
       unselectedItemColor: Colors.grey,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
@@ -170,7 +170,7 @@ class _SearchScreenState extends State<SearchScreen> {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
       decoration: const BoxDecoration(
-        color: Colors.deepPurple,
+        color: Color(0xFFF48FB1),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
@@ -227,9 +227,9 @@ class _SearchScreenState extends State<SearchScreen> {
         decoration: InputDecoration(
           hintText: "Search research topic",
           hintStyle: TextStyle(color: Colors.grey[400]),
-          prefixIcon: const Icon(Icons.search, color: Colors.deepPurple),
+          prefixIcon: const Icon(Icons.search, color: Color(0xFFF48FB1)),
           suffixIcon: IconButton(
-            icon: const Icon(Icons.arrow_forward_ios, color: Colors.deepPurple, size: 18),
+            icon: const Icon(Icons.arrow_forward_ios, color: Color(0xFFF48FB1), size: 18),
             onPressed: _onSearch,
           ),
           border: InputBorder.none,
@@ -248,7 +248,7 @@ class _SearchScreenState extends State<SearchScreen> {
           return Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: ActionChip(
-              label: Text(topic, style: const TextStyle(color: Colors.deepPurple, fontSize: 12)),
+              label: Text(topic, style: const TextStyle(color: Color(0xFFF48FB1), fontSize: 12)),
               backgroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               onPressed: () => _onChipTapped(topic),
@@ -325,7 +325,7 @@ class _SearchScreenState extends State<SearchScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(
           children: [
-            Icon(icon, color: Colors.deepPurple, size: 20),
+            Icon(icon, color: Color(0xFFF48FB1), size: 20),
             const SizedBox(width: 8),
             Expanded(child: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87))),
           ],
