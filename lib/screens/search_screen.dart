@@ -25,10 +25,23 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
   int _currentIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    // Rebuild when the search field gains/loses focus so the recent-searches
+    // dropdown can show/hide.
+    _searchFocus.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() => setState(() {});
+
+  @override
   void dispose() {
+    _searchFocus.removeListener(_onFocusChange);
+    _searchFocus.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -304,7 +317,7 @@ class _SearchScreenState extends State<SearchScreen> {
               const SizedBox(height: 22),
               _buildSearchArea(),
               const SizedBox(height: 16),
-              _buildTopicChips(),
+              _buildHeaderSuggestions(),
             ],
           ),
         ),
@@ -327,8 +340,10 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
       child: TextField(
         controller: _controller,
+        focusNode: _searchFocus,
         textInputAction: TextInputAction.search,
         onSubmitted: (_) => _onSearch(),
+        onChanged: (_) => setState(() {}),
         style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           hintText: context.s.searchHint,
@@ -415,7 +430,6 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _buildRecentSearches(),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(22),
@@ -450,81 +464,109 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildRecentSearches() {
+  /// Below the search field: shows the recent-searches dropdown while the
+  /// field is focused and empty, otherwise the default topic chips.
+  Widget _buildHeaderSuggestions() {
     final recent = context.watch<RecentProvider>().searches;
-    if (recent.isEmpty) return const SizedBox.shrink();
+    final showRecent = _searchFocus.hasFocus &&
+        _controller.text.trim().isEmpty &&
+        recent.isNotEmpty;
+    return showRecent ? _buildRecentDropdown(recent) : _buildTopicChips();
+  }
+
+  Widget _buildRecentDropdown(List<String> recent) {
+    final rows = <Widget>[];
+    for (var i = 0; i < recent.length; i++) {
+      rows.add(_recentRow(recent[i]));
+      if (i != recent.length - 1) {
+        rows.add(const Divider(height: 1, indent: 14, endIndent: 14));
+      }
+    }
 
     return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.history_rounded,
-                  size: 18, color: AppColors.muted),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(context.s.recentSearchesTitle,
-                    style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink)),
-              ),
-              GestureDetector(
-                onTap: () => context.read<RecentProvider>().clearSearches(),
-                child: Text(context.s.clearAll,
-                    style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: recent.map(_recentSearchChip).toList(),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
+      ),
+      child: ConstrainedBox(
+        // Cap the height so the header never overflows when the keyboard is
+        // open; the list scrolls internally if it ever grows.
+        constraints: const BoxConstraints(maxHeight: 320),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 10, 8, 6),
+                child: Row(
+                  children: [
+                    const Icon(Icons.history_rounded,
+                        size: 16, color: AppColors.muted),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(context.s.recentSearchesTitle,
+                          style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.muted)),
+                    ),
+                    GestureDetector(
+                      onTap: () =>
+                          context.read<RecentProvider>().clearSearches(),
+                      behavior: HitTestBehavior.opaque,
+                      child: Text(context.s.clearAll,
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary)),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              ...rows,
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _recentSearchChip(String topic) {
+  Widget _recentRow(String topic) {
     return Material(
-      color: AppColors.card,
-      borderRadius: BorderRadius.circular(20),
+      color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
         onTap: () => _onChipTapped(topic),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.border),
-          ),
-          padding: const EdgeInsets.fromLTRB(12, 7, 6, 7),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.history_rounded,
-                  size: 14, color: AppColors.faint),
-              const SizedBox(width: 6),
-              Text(topic,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.body)),
-              const SizedBox(width: 2),
+                  size: 18, color: AppColors.faint),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(topic,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.ink)),
+              ),
               GestureDetector(
                 onTap: () => context.read<RecentProvider>().removeSearch(topic),
                 behavior: HitTestBehavior.opaque,
                 child: const Padding(
-                  padding: EdgeInsets.all(3),
+                  padding: EdgeInsets.all(4),
                   child: Icon(Icons.close_rounded,
-                      size: 15, color: AppColors.faint),
+                      size: 18, color: AppColors.faint),
                 ),
               ),
             ],
