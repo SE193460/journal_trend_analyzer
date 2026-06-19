@@ -8,6 +8,7 @@ import '../l10n/locale_provider.dart';
 import '../models/topic_comparison.dart';
 import '../models/topic_recommendation.dart';
 import '../providers/compare_provider.dart';
+import '../providers/recent_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 
@@ -70,7 +71,28 @@ class _CompareTopicsScreenState extends State<CompareTopicsScreen> {
     }
 
     FocusScope.of(context).unfocus();
+    context.read<RecentProvider>().addComparison(topics);
     context.read<CompareProvider>().compare(topics);
+  }
+
+  /// Fills the inputs with a saved comparison and runs it again.
+  void _applyComparison(List<String> topics) {
+    final clean = topics.map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
+    if (clean.length < _minTopics) return;
+
+    setState(() {
+      while (_controllers.length < clean.length) {
+        _controllers.add(TextEditingController());
+      }
+      while (_controllers.length > clean.length &&
+          _controllers.length > _minTopics) {
+        _controllers.removeLast().dispose();
+      }
+      for (var i = 0; i < _controllers.length; i++) {
+        _controllers[i].text = i < clean.length ? clean[i] : '';
+      }
+    });
+    _onCompare();
   }
 
   @override
@@ -93,6 +115,7 @@ class _CompareTopicsScreenState extends State<CompareTopicsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildInputCard(),
+                  _buildRecentComparisons(),
                   const SizedBox(height: 20),
                   _buildResultsArea(provider),
                 ],
@@ -200,6 +223,102 @@ class _CompareTopicsScreenState extends State<CompareTopicsScreen> {
                 size: 20, color: AppColors.faint),
           ),
       ],
+    );
+  }
+
+  // ─── Recent comparisons ──────────────────────────────────
+
+  Widget _buildRecentComparisons() {
+    final recents = context.watch<RecentProvider>().comparisons;
+    if (recents.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: SectionCard(
+        padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.history_rounded,
+                    size: 18, color: AppColors.muted),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(context.s.recentComparisonsTitle,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.ink)),
+                ),
+                GestureDetector(
+                  onTap: () =>
+                      context.read<RecentProvider>().clearComparisons(),
+                  child: Text(context.s.clearAll,
+                      style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (final c in recents) _recentComparisonTile(c),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _recentComparisonTile(List<String> topics) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _applyComparison(topics),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                      color: AppColors.primarySoft,
+                      borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.compare_arrows_rounded,
+                      size: 16, color: AppColors.primary),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    topics.join("  •  "),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.ink,
+                        height: 1.3),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () =>
+                      context.read<RecentProvider>().removeComparison(topics),
+                  behavior: HitTestBehavior.opaque,
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(Icons.close_rounded,
+                        size: 18, color: AppColors.faint),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

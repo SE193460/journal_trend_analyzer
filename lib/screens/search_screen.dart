@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/locale_provider.dart';
 import '../providers/publication_provider.dart';
+import '../providers/recent_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 import '../widgets/language_toggle.dart';
@@ -39,8 +40,9 @@ class _SearchScreenState extends State<SearchScreen> {
       );
       return;
     }
-    Provider.of<PublicationProvider>(context, listen: false)
-        .search(_controller.text.trim());
+    final topic = _controller.text.trim();
+    context.read<RecentProvider>().addSearch(topic);
+    Provider.of<PublicationProvider>(context, listen: false).search(topic);
     FocusScope.of(context).unfocus();
   }
 
@@ -413,6 +415,7 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            _buildRecentSearches(),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(22),
@@ -442,6 +445,90 @@ class _SearchScreenState extends State<SearchScreen> {
             const SizedBox(height: 32),
             _buildFeatureShortcuts(),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentSearches() {
+    final recent = context.watch<RecentProvider>().searches;
+    if (recent.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.history_rounded,
+                  size: 18, color: AppColors.muted),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(context.s.recentSearchesTitle,
+                    style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink)),
+              ),
+              GestureDetector(
+                onTap: () => context.read<RecentProvider>().clearSearches(),
+                child: Text(context.s.clearAll,
+                    style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: recent.map(_recentSearchChip).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _recentSearchChip(String topic) {
+    return Material(
+      color: AppColors.card,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _onChipTapped(topic),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.border),
+          ),
+          padding: const EdgeInsets.fromLTRB(12, 7, 6, 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.history_rounded,
+                  size: 14, color: AppColors.faint),
+              const SizedBox(width: 6),
+              Text(topic,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.body)),
+              const SizedBox(width: 2),
+              GestureDetector(
+                onTap: () => context.read<RecentProvider>().removeSearch(topic),
+                behavior: HitTestBehavior.opaque,
+                child: const Padding(
+                  padding: EdgeInsets.all(3),
+                  child: Icon(Icons.close_rounded,
+                      size: 15, color: AppColors.faint),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

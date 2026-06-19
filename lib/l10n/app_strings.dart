@@ -22,6 +22,10 @@ class AppStrings {
   String get papersUnit => _t('papers', 'bài báo');
   String get notAvailable => _t('N/A', 'Không có');
   String get languageMenu => _t('Language', 'Ngôn ngữ');
+  String get clearAll => _t('Clear all', 'Xóa tất cả');
+  String get recentSearchesTitle => _t('Recent searches', 'Tìm kiếm gần đây');
+  String get recentComparisonsTitle =>
+      _t('Recent comparisons', 'So sánh gần đây');
 
   // ─── Search screen ───────────────────────────────────────
   String get searchHeaderSubtitle => _t(

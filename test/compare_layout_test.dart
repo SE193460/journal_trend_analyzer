@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:journal_trend_analyzer/l10n/locale_provider.dart';
 import 'package:journal_trend_analyzer/models/dashboard_summary.dart';
 import 'package:journal_trend_analyzer/models/publication.dart';
 import 'package:journal_trend_analyzer/models/topic_comparison.dart';
 import 'package:journal_trend_analyzer/providers/compare_provider.dart';
+import 'package:journal_trend_analyzer/providers/recent_provider.dart';
 import 'package:journal_trend_analyzer/screens/compare_topics_screen.dart';
 
 ResearchDashboardSummary _summary(int total, double avg) {
@@ -34,6 +36,8 @@ ResearchDashboardSummary _summary(int total, double avg) {
 }
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('CompareTopicsScreen results render on a narrow phone screen',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 700));
@@ -50,6 +54,7 @@ void main() {
       MultiProvider(
         providers: [
           ChangeNotifierProvider<CompareProvider>.value(value: compare),
+          ChangeNotifierProvider(create: (_) => RecentProvider()),
           ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ],
         child: const MaterialApp(home: CompareTopicsScreen()),
