@@ -149,6 +149,10 @@ class AppStrings {
       _t('Papers published by year', 'Số bài báo công bố theo năm');
   String get loadingTrend =>
       _t('Loading trend data…', 'Đang tải dữ liệu xu hướng…');
+  String get loadingJournals =>
+      _t('Loading top journals…', 'Đang tải tạp chí hàng đầu…');
+  String get loadingAuthors =>
+      _t('Loading top authors…', 'Đang tải tác giả hàng đầu…');
   String get noTrendTitle => _t('No trend data', 'Chưa có dữ liệu xu hướng');
   String get noTrendMessage => _t(
       'Search a topic to see how publications evolved over time.',

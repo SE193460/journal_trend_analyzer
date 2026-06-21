@@ -2,23 +2,39 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/locale_provider.dart';
-import '../providers/publication_provider.dart';
+import '../providers/top_author_provider.dart';
+import '../providers/recent_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
+import '../widgets/topic_search_bar.dart';
 
-class TopAuthorScreen extends StatelessWidget {
+class TopAuthorScreen extends StatefulWidget {
   const TopAuthorScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final provider = Provider.of<PublicationProvider>(context);
-    final authors = provider.topAuthors;
+  State<TopAuthorScreen> createState() => _TopAuthorScreenState();
+}
 
-    final int maxCount = authors.isNotEmpty
-        ? authors
-            .map((a) => (a['count'] as int?) ?? 0)
-            .reduce((a, b) => a > b ? a : b)
-        : 1;
+class _TopAuthorScreenState extends State<TopAuthorScreen> {
+  String _currentSearchText = "";
+
+  void _onSearch(String text) {
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.s.enterTopicWarning)),
+      );
+      return;
+    }
+    setState(() {
+      _currentSearchText = text;
+    });
+    context.read<RecentProvider>().addSearch(text);
+    Provider.of<TopAuthorProvider>(context, listen: false).search(text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = Provider.of<TopAuthorProvider>(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -30,29 +46,54 @@ class TopAuthorScreen extends StatelessWidget {
                 ? context.s.topAuthorsSubtitleForTopic(provider.currentTopic)
                 : context.s.topAuthorsSubtitleDefault,
             icon: Icons.people_alt_rounded,
+            child: TopicSearchBar(
+              hintText: 'Search topic for top authors',
+              initialValue: _currentSearchText,
+              onSearch: _onSearch,
+            ),
           ),
-          Expanded(
-            child: authors.isEmpty
-                ? StateView.empty(
-                    icon: Icons.people_alt_rounded,
-                    title: context.s.noAuthorsTitle,
-                    message: context.s.noAuthorsMessage,
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
-                    itemCount: authors.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final entry = authors[index];
-                      final name = entry['name']?.toString() ?? "Unknown";
-                      final count = (entry['count'] as int?) ?? 0;
-                      return _authorCard(
-                          context, index + 1, name, count, maxCount);
-                    },
-                  ),
-          ),
+          Expanded(child: _buildBody(provider)),
         ],
       ),
+    );
+  }
+
+  Widget _buildBody(TopAuthorProvider provider) {
+    if (provider.isLoading) {
+      return StateView.loading(message: context.s.loadingAuthors);
+    }
+
+    if (provider.errorMessage.isNotEmpty) {
+      return StateView.error(
+        context.s.somethingWentWrong,
+        onRetry: () => provider.search(provider.currentTopic),
+      );
+    }
+
+    final authors = provider.authors;
+    final maxCount = provider.maxCount;
+
+    if (authors.isEmpty && provider.currentTopic.isNotEmpty) {
+      return StateView.empty(
+        icon: Icons.people_alt_rounded,
+        title: context.s.noAuthorsTitle,
+        message: context.s.noAuthorsMessage,
+      );
+    } else if (authors.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+      itemCount: authors.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final entry = authors[index];
+        final name = entry['name']?.toString() ?? "Unknown";
+        final count = (entry['count'] as int?) ?? 0;
+        return _authorCard(
+            context, index + 1, name, count, maxCount);
+      },
     );
   }
 

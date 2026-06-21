@@ -4,10 +4,13 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../l10n/locale_provider.dart';
-import '../providers/publication_provider.dart';
+import '../providers/trend_provider.dart';
+import '../providers/recent_provider.dart';
 import '../models/publication.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
+import '../widgets/topic_search_bar.dart';
+import 'detail_screen.dart';
 
 class TrendScreen extends StatefulWidget {
   const TrendScreen({super.key});
@@ -17,13 +20,28 @@ class TrendScreen extends StatefulWidget {
 }
 
 class _TrendScreenState extends State<TrendScreen> {
+  String _currentSearchText = "";
   String? _lastTopic;
   double? _startYear;
   double? _endYear;
 
+  void _onSearch(String text) {
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.s.enterTopicWarning)),
+      );
+      return;
+    }
+    setState(() {
+      _currentSearchText = text;
+    });
+    context.read<RecentProvider>().addSearch(text);
+    Provider.of<TrendProvider>(context, listen: false).search(text);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<PublicationProvider>(context);
+    final provider = Provider.of<TrendProvider>(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -35,6 +53,11 @@ class _TrendScreenState extends State<TrendScreen> {
                 ? context.s.trendSubtitleForTopic(provider.currentTopic)
                 : context.s.trendSubtitleDefault,
             icon: Icons.trending_up_rounded,
+            child: TopicSearchBar(
+              hintText: 'Search topic for trend analysis',
+              initialValue: _currentSearchText,
+              onSearch: _onSearch,
+            ),
           ),
           Expanded(child: _buildBody(provider)),
         ],
@@ -42,7 +65,7 @@ class _TrendScreenState extends State<TrendScreen> {
     );
   }
 
-  Widget _buildBody(PublicationProvider provider) {
+  Widget _buildBody(TrendProvider provider) {
     if (provider.isLoading) {
       return StateView.loading(message: context.s.loadingTrend);
     }
@@ -142,6 +165,8 @@ class _TrendScreenState extends State<TrendScreen> {
             ),
           const SizedBox(height: 16),
           _buildInsightSection(insightText),
+          const SizedBox(height: 24),
+          _buildTopPapersSection(provider),
         ],
       ),
     );
@@ -347,15 +372,24 @@ class _TrendScreenState extends State<TrendScreen> {
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
                     getTooltipColor: (_) => AppColors.ink,
-                    getTooltipItems: (touchedSpots) => touchedSpots
-                        .map((spot) => LineTooltipItem(
-                              context.s.chartPapersTooltip(
-                                  spot.x.toInt(), _compact(spot.y.toInt())),
-                              const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold),
-                            ))
-                        .toList(),
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        try {
+                          return LineTooltipItem(
+                            context.s.chartPapersTooltip(
+                                spot.x.toInt(), _compact(spot.y.toInt())),
+                            const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
+                          );
+                        } catch (_) {
+                          return const LineTooltipItem(
+                            '',
+                            TextStyle(color: Colors.white),
+                          );
+                        }
+                      }).toList();
+                    },
                   ),
                 ),
               ),
@@ -365,6 +399,173 @@ class _TrendScreenState extends State<TrendScreen> {
       ),
     );
   }
+
+  // ─── Top Papers section (embedded) ────────────────────────
+
+  Widget _buildTopPapersSection(TrendProvider provider) {
+    final papers = provider.topPapers;
+    if (papers.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle(
+          title: context.s.topPapersTitle,
+          icon: Icons.workspace_premium_rounded,
+        ),
+        const SizedBox(height: 12),
+        ...papers.take(5).toList().asMap().entries.map((entry) {
+          final index = entry.key;
+          final paper = entry.value;
+          return Padding(
+            padding: EdgeInsets.only(bottom: index < 4 ? 12 : 0),
+            child: _buildPaperCard(paper, index + 1),
+          );
+        }),
+        if (papers.length > 5) ...[
+          const SizedBox(height: 8),
+          Center(
+            child: TextButton.icon(
+              onPressed: () => _showAllPapers(papers),
+              icon: const Icon(Icons.expand_more_rounded, size: 20),
+              label: Text(
+                context.s.plusMore(papers.length - 5),
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700, fontSize: 13),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPaperCard(Publication paper, int rank) {
+    return Material(
+      color: AppColors.card,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => DetailScreen(publication: paper)),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: AppColors.border),
+            boxShadow: AppShadows.soft,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              RankBadge(rank: rank),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(paper.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink,
+                            height: 1.35)),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        MetaChip(
+                            icon: Icons.calendar_today_rounded,
+                            label: "${paper.year}",
+                            color: AppColors.emerald),
+                        const SizedBox(width: 8),
+                        MetaChip(
+                            icon: Icons.format_quote_rounded,
+                            label: context.s
+                                .citesBadge(_compact(paper.citationCount)),
+                            color: AppColors.primary),
+                      ],
+                    ),
+                    if (paper.journal.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.menu_book_rounded,
+                              size: 14, color: AppColors.faint),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(paper.journal,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 12.5,
+                                    color: AppColors.muted)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAllPapers(List<Publication> papers) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        expand: false,
+        builder: (_, scrollController) => Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.faint,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: SectionTitle(
+                title: context.s.topPapersTitle,
+                icon: Icons.workspace_premium_rounded,
+              ),
+            ),
+            Expanded(
+              child: ListView.separated(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                itemCount: papers.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (_, index) =>
+                    _buildPaperCard(papers[index], index + 1),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Insight section ──────────────────────────────────────
 
   Widget _buildInsightSection(String text) {
     return Container(
