@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/locale_provider.dart';
+import '../models/author.dart';
 import '../providers/top_author_provider.dart';
 import '../providers/recent_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 import '../widgets/topic_search_bar.dart';
+import 'author_detail_screen.dart';
 
 class TopAuthorScreen extends StatefulWidget {
   const TopAuthorScreen({super.key});
@@ -71,7 +73,6 @@ class _TopAuthorScreenState extends State<TopAuthorScreen> {
     }
 
     final authors = provider.authors;
-    final maxCount = provider.maxCount;
 
     if (authors.isEmpty && provider.currentTopic.isNotEmpty) {
       return StateView.empty(
@@ -86,93 +87,117 @@ class _TopAuthorScreenState extends State<TopAuthorScreen> {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
       itemCount: authors.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, index) {
-        final entry = authors[index];
-        final name = entry['name']?.toString() ?? "Unknown";
-        final count = (entry['count'] as int?) ?? 0;
-        return _authorCard(
-            context, index + 1, name, count, maxCount);
+        final author = authors[index];
+        return _authorCard(context, index + 1, author);
       },
     );
   }
 
-  Widget _authorCard(
-      BuildContext context, int rank, String name, int count, int maxCount) {
-    final ratio = (count / maxCount).clamp(0.05, 1.0);
-    return SectionCard(
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          RankBadge(rank: rank),
-          const SizedBox(width: 12),
-          _avatar(name),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.ink)),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: ratio,
-                    minHeight: 6,
-                    backgroundColor: AppColors.primarySoft,
-                    valueColor: const AlwaysStoppedAnimation(AppColors.violet),
+  Widget _authorCard(BuildContext context, int rank, TopAuthor author) {
+    Color rankColor;
+    if (rank == 1) {
+      rankColor = AppColors.gold;
+    } else if (rank == 2) {
+      rankColor = AppColors.silver;
+    } else if (rank == 3) {
+      rankColor = AppColors.bronze;
+    } else {
+      rankColor = AppColors.faint;
+    }
+
+    String initials = "";
+    final parts = author.name.trim().split(" ");
+    if (parts.isNotEmpty) {
+      initials = parts.first[0].toUpperCase();
+      if (parts.length > 1) {
+        initials += parts.last[0].toUpperCase();
+      }
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AuthorDetailScreen(
+                authorId: author.id,
+                authorName: author.name,
+                topic: _currentSearchText,
+              ),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 28,
+                child: Text(
+                  "$rank",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: rankColor,
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text("$count",
+              ),
+              const SizedBox(width: 12),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: rankColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  initials,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: rankColor == AppColors.faint ? AppColors.muted : rankColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  author.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.violet)),
-              Text(context.s.papersUnit,
-                  style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.ink,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "${author.worksCount}",
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.description_outlined, size: 16, color: AppColors.faint),
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
-    );
-  }
-
-  Widget _avatar(String name) {
-    final initials = name.trim().isNotEmpty
-        ? name
-            .trim()
-            .split(RegExp(r'\s+'))
-            .take(2)
-            .map((w) => w[0])
-            .join()
-            .toUpperCase()
-        : "?";
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        color: AppColors.violet.withValues(alpha: 0.12),
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(initials,
-          style: const TextStyle(
-              color: AppColors.violet,
-              fontWeight: FontWeight.w800,
-              fontSize: 13)),
     );
   }
 }

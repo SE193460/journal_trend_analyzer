@@ -9,10 +9,15 @@ class DashboardProvider extends ChangeNotifier {
   bool isLoading = false;
   String errorMessage = "";
   String currentTopic = "";
+  int selectedLimit = 50;
 
-  Future<void> search(String keyword) async {
+  Future<void> search(String keyword, {int? limit}) async {
     final cleaned = keyword.trim();
     if (cleaned.isEmpty) return;
+    
+    if (limit != null) {
+      selectedLimit = limit;
+    }
 
     try {
       isLoading = true;
@@ -20,7 +25,7 @@ class DashboardProvider extends ChangeNotifier {
       currentTopic = cleaned;
       notifyListeners();
 
-      dashboardSummary = await _service.fetchResearchDashboardSummary(cleaned);
+      dashboardSummary = await _service.fetchResearchDashboardSummary(cleaned, selectedLimit);
     } catch (e) {
       errorMessage = "Error: $e";
       dashboardSummary = null;

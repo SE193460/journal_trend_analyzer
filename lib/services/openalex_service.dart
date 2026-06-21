@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../models/publication.dart';
+import '../models/author.dart';
 import '../models/dashboard_summary.dart';
 
 class OpenAlexService{
@@ -63,12 +64,12 @@ class OpenAlexService{
     }
   }
 
-  Future<List<Map<String, dynamic>>> fetchTopAuthors(String keyword) async {
+  Future<List<TopAuthor>> fetchTopAuthors(String keyword) async {
     try {
-      final response = await dio.get('https://api.openalex.org/works?search=$keyword&group_by=author.id');
+      final response = await dio.get('https://api.openalex.org/works?search=$keyword&group_by=authorships.author.id');
       List results = response.data['group_by'];
       
-      Map<String, int> mergedAuthors = {};
+      Map<String, TopAuthor> mergedAuthors = {};
       
       for (var e in results) {
         String name = e['key_display_name']?.toString().trim() ?? "Unknown";
@@ -76,19 +77,49 @@ class OpenAlexService{
         
         if (!_isValidAuthorName(name)) continue;
         
-        mergedAuthors[name] = (mergedAuthors[name] ?? 0) + count;
+        if (mergedAuthors.containsKey(name)) {
+          // If we see duplicate names with different IDs, just combine their count.
+          mergedAuthors[name] = TopAuthor(
+            id: mergedAuthors[name]!.id,
+            name: name,
+            worksCount: mergedAuthors[name]!.worksCount + count,
+            citedByCount: null,
+          );
+        } else {
+          mergedAuthors[name] = TopAuthor.fromJson(e);
+        }
       }
       
-      var mergedList = mergedAuthors.entries.map((e) => {
-        "name": e.key,
-        "count": e.value,
-      }).toList();
-      
-      mergedList.sort((a, b) => (b['count'] as int).compareTo(a['count'] as int));
+      var mergedList = mergedAuthors.values.toList();
+      mergedList.sort((a, b) => b.worksCount.compareTo(a.worksCount));
       
       return mergedList;
     } catch (e) {
       throw Exception("Top Authors API Failed");
+    }
+  }
+
+  Future<AuthorDetail> fetchAuthorDetail(String authorId) async {
+    try {
+      final response = await dio.get('https://api.openalex.org/authors/$authorId');
+      return AuthorDetail.fromJson(response.data);
+    } catch (e) {
+      throw Exception("Author Detail API Failed");
+    }
+  }
+
+  Future<List<Publication>> fetchAuthorPublications({
+    required String authorId,
+    required String topic,
+  }) async {
+    try {
+      final response = await dio.get(
+        'https://api.openalex.org/works?filter=authorships.author.id:$authorId&search=$topic&sort=cited_by_count:desc&per-page=25'
+      );
+      List results = response.data['results'];
+      return results.map((e) => Publication.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception("Author Publications API Failed");
     }
   }
 
@@ -151,10 +182,10 @@ class OpenAlexService{
     }
   }
 
-  Future<double> fetchAverageCitationCount(String keyword) async {
+  Future<double> fetchAverageCitationCount(String keyword, int limit) async {
     try {
       final response = await dio.get(
-        'https://api.openalex.org/works?search=$keyword&sort=cited_by_count:desc&per-page=200'
+        'https://api.openalex.org/works?search=$keyword&sort=cited_by_count:desc&per-page=$limit'
       );
       List results = response.data['results'];
       if (results.isEmpty) return 0;
@@ -168,14 +199,14 @@ class OpenAlexService{
     }
   }
 
-  Future<ResearchDashboardSummary> fetchResearchDashboardSummary(String keyword) async {
+  Future<ResearchDashboardSummary> fetchResearchDashboardSummary(String keyword, int limit) async {
     var futures = await Future.wait([
       fetchTotalPublicationCount(keyword),      // 0
       fetchPublicationTrend(keyword),            // 1
       fetchTopJournal(keyword),                  // 2
       fetchDashboardTopAuthor(keyword),          // 3
       fetchMostInfluentialPaper(keyword),         // 4
-      fetchAverageCitationCount(keyword),         // 5
+      fetchAverageCitationCount(keyword, limit),  // 5
     ]);
 
     int totalPublications = futures[0] as int;

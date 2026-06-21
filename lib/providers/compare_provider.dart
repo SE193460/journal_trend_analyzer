@@ -31,7 +31,7 @@ class CompareProvider extends ChangeNotifier {
       notifyListeners();
 
       final summaries = await Future.wait(
-        cleaned.map((t) => _service.fetchResearchDashboardSummary(t)),
+        cleaned.map((t) => _service.fetchResearchDashboardSummary(t, 200)),
       );
 
       results = [
