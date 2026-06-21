@@ -7,12 +7,16 @@ import 'package:url_launcher/url_launcher.dart';
 import '../l10n/locale_provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/recent_provider.dart';
+import '../providers/top_journal_provider.dart';
+import '../providers/top_author_provider.dart';
 import '../models/dashboard_summary.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 import '../widgets/topic_search_bar.dart';
 import 'detail_screen.dart';
-
+import 'top_journal_screen.dart';
+import 'top_author_screen.dart';
+import 'author_detail_screen.dart';
 class DashboardScreen extends StatefulWidget {
   final GlobalKey<ScaffoldState>? scaffoldKey;
   const DashboardScreen({super.key, this.scaffoldKey});
@@ -23,6 +27,13 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   String _currentSearchText = "";
+  final TextEditingController _limitController = TextEditingController(text: '50');
+
+  @override
+  void dispose() {
+    _limitController.dispose();
+    super.dispose();
+  }
 
   void _onSearch(String topic) {
     if (topic.isEmpty) {
@@ -35,7 +46,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _currentSearchText = topic;
     });
     context.read<RecentProvider>().addSearch(topic);
-    Provider.of<DashboardProvider>(context, listen: false).search(topic);
+    
+    final dashboardProvider = Provider.of<DashboardProvider>(context, listen: false);
+    dashboardProvider.search(topic, limit: dashboardProvider.selectedLimit);
+    
+    Provider.of<TopJournalProvider>(context, listen: false).search(topic);
+    Provider.of<TopAuthorProvider>(context, listen: false).search(topic);
+  }
+
+  void _onLimitSubmitted(String value) {
+    final intValue = int.tryParse(value);
+    if (intValue == null || intValue <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid number greater than 0')),
+      );
+      // Reset text field to current limit
+      _limitController.text = Provider.of<DashboardProvider>(context, listen: false).selectedLimit.toString();
+      return;
+    }
+    
+    final provider = Provider.of<DashboardProvider>(context, listen: false);
+    if (provider.selectedLimit != intValue) {
+      provider.selectedLimit = intValue;
+      if (_currentSearchText.isNotEmpty) {
+        _onSearch(_currentSearchText);
+      } else {
+        // Just update UI if no search is active
+        setState(() {});
+      }
+    }
   }
 
   void _onChipTapped(String topic) {
@@ -121,8 +160,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 initialValue: _currentSearchText,
                 onSearch: _onSearch,
               ),
+              const SizedBox(height: 12),
+              _buildLimitFilter(),
               const SizedBox(height: 16),
-              _buildHeaderSuggestions(),
+              _buildTopicChips(),
             ],
           ),
         ),
@@ -174,46 +215,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildHeaderSuggestions() {
-    return _buildTopicChips();
-  }
-
-
-
-  Widget _recentRow(String topic) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _onChipTapped(topic),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              const Icon(Icons.history_rounded,
-                  size: 18, color: AppColors.faint),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(topic,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.ink)),
-              ),
-              GestureDetector(
-                onTap: () => context.read<RecentProvider>().removeSearch(topic),
-                behavior: HitTestBehavior.opaque,
-                child: const Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Icon(Icons.close_rounded,
-                      size: 18, color: AppColors.faint),
-                ),
-              ),
-            ],
+  Widget _buildLimitFilter() {
+    return Row(
+      children: [
+        const Icon(Icons.filter_list_rounded, color: Colors.white70, size: 16),
+        const SizedBox(width: 8),
+        const Text(
+          "Papers Retrieved:",
+          style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          height: 32,
+          width: 80,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: TextField(
+            controller: _limitController,
+            keyboardType: TextInputType.number,
+            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(vertical: 8),
+            ),
+            onSubmitted: _onLimitSubmitted,
+            textInputAction: TextInputAction.done,
+            cursorColor: Colors.white,
+            textAlign: TextAlign.center,
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -263,8 +298,202 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _buildMiniTrendChart(context, summary),
           const SizedBox(height: 16),
           _buildMostInfluentialCard(context, summary),
+          const SizedBox(height: 24),
+          _buildTopJournalsPreview(context),
+          const SizedBox(height: 24),
+          _buildTopAuthorsPreview(context),
         ],
       ),
+    );
+  }
+
+  Widget _buildTopJournalsPreview(BuildContext context) {
+    final provider = Provider.of<TopJournalProvider>(context);
+    
+    if (provider.isLoading) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(context.s.topJournalsTitle, null),
+          const SizedBox(height: 12),
+          _buildSkeletonCard(80),
+        ],
+      );
+    }
+    
+    if (provider.journals.isEmpty) return const SizedBox.shrink();
+
+    final items = provider.journals.take(5).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle(context.s.topJournalsTitle, () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TopJournalScreen()),
+          );
+        }),
+        const SizedBox(height: 12),
+        SectionCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final journal = entry.value; // MapEntry<String, int>
+              final name = journal.key.isEmpty ? "Unknown" : journal.key;
+              final count = journal.value;
+              return Column(
+                children: [
+                  ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.indigo.withValues(alpha: 0.1),
+                      child: const Icon(Icons.menu_book_rounded, color: AppColors.indigo, size: 20),
+                    ),
+                    title: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    trailing: Text(
+                      "$count",
+                      style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const TopJournalScreen()),
+                      );
+                    },
+                  ),
+                  if (index < items.length - 1) const Divider(height: 1),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTopAuthorsPreview(BuildContext context) {
+    final provider = Provider.of<TopAuthorProvider>(context);
+    
+    if (provider.isLoading) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle("Top Authors", null),
+          const SizedBox(height: 12),
+          _buildSkeletonCard(80),
+        ],
+      );
+    }
+    
+    if (provider.authors.isEmpty) return const SizedBox.shrink();
+
+    final items = provider.authors.take(5).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle("Top Authors", () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TopAuthorScreen()),
+          );
+        }),
+        const SizedBox(height: 12),
+        SectionCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final author = entry.value;
+              
+              String initials = "";
+              final parts = author.name.trim().split(" ");
+              if (parts.isNotEmpty) {
+                initials = parts.first[0].toUpperCase();
+                if (parts.length > 1) {
+                  initials += parts.last[0].toUpperCase();
+                }
+              }
+
+              return Column(
+                children: [
+                  ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.violet.withValues(alpha: 0.1),
+                      child: Text(
+                        initials,
+                        style: const TextStyle(color: AppColors.violet, fontWeight: FontWeight.w700, fontSize: 14),
+                      ),
+                    ),
+                    title: Text(
+                      author.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    trailing: Text(
+                      "${author.worksCount}",
+                      style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AuthorDetailScreen(
+                            authorId: author.id,
+                            authorName: author.name,
+                            topic: _currentSearchText,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  if (index < items.length - 1) const Divider(height: 1),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sectionTitle(String title, VoidCallback? onViewAll) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: AppColors.ink,
+          ),
+        ),
+        if (onViewAll != null)
+          TextButton(
+            onPressed: onViewAll,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              "View All",
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+      ],
     );
   }
 

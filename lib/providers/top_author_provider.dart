@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import '../models/author.dart';
 import '../services/openalex_service.dart';
 
 class TopAuthorProvider extends ChangeNotifier {
   final OpenAlexService _service = OpenAlexService();
 
-  List<Map<String, dynamic>> authors = [];
+  List<TopAuthor> authors = [];
   int maxCount = 1;
   
   bool isLoading = false;
@@ -25,7 +26,7 @@ class TopAuthorProvider extends ChangeNotifier {
       
       maxCount = authors.isNotEmpty
         ? authors
-            .map((a) => (a['count'] as int?) ?? 0)
+            .map((a) => a.worksCount)
             .reduce((a, b) => a > b ? a : b)
         : 1;
         

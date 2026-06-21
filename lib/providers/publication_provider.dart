@@ -23,12 +23,13 @@ class PublicationProvider extends ChangeNotifier {
       currentTopic = keyword;
       notifyListeners();
 
+      var cleaned = keyword.trim();
       var futures = await Future.wait([
         _service.searchPublication(keyword),
         _service.fetchPublicationTrend(keyword),
         _service.fetchTopInfluentialPapers(keyword),
         _service.fetchTopAuthors(keyword),
-        _service.fetchResearchDashboardSummary(keyword),
+        _service.fetchResearchDashboardSummary(cleaned, 200),
       ]);
 
       publications = futures[0] as List<Publication>;

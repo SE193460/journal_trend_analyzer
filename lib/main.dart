@@ -7,6 +7,7 @@ import 'providers/dashboard_provider.dart';
 import 'providers/trend_provider.dart';
 import 'providers/top_journal_provider.dart';
 import 'providers/top_author_provider.dart';
+import 'providers/author_detail_provider.dart';
 import 'providers/publication_provider.dart';
 import 'providers/recent_provider.dart';
 import 'screens/splash_screen.dart';
@@ -21,6 +22,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => TrendProvider()),
         ChangeNotifierProvider(create: (_) => TopJournalProvider()),
         ChangeNotifierProvider(create: (_) => TopAuthorProvider()),
+        ChangeNotifierProvider(create: (_) => AuthorDetailProvider()),
         ChangeNotifierProvider(create: (_) => CompareProvider()),
         ChangeNotifierProvider(create: (_) => RecentProvider()..load()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
