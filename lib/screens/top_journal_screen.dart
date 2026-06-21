@@ -2,27 +2,39 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/locale_provider.dart';
-import '../providers/publication_provider.dart';
+import '../providers/top_journal_provider.dart';
+import '../providers/recent_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
+import '../widgets/topic_search_bar.dart';
 
-class TopJournalScreen extends StatelessWidget {
+class TopJournalScreen extends StatefulWidget {
   const TopJournalScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final provider = Provider.of<PublicationProvider>(context);
+  State<TopJournalScreen> createState() => _TopJournalScreenState();
+}
 
-    final Map<String, int> journals = {};
-    for (var p in provider.publications) {
-      if (p.journal.isNotEmpty) {
-        journals[p.journal] = (journals[p.journal] ?? 0) + 1;
-      }
+class _TopJournalScreenState extends State<TopJournalScreen> {
+  String _currentSearchText = "";
+
+  void _onSearch(String text) {
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.s.enterTopicWarning)),
+      );
+      return;
     }
-    final sorted = journals.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    setState(() {
+      _currentSearchText = text;
+    });
+    context.read<RecentProvider>().addSearch(text);
+    Provider.of<TopJournalProvider>(context, listen: false).search(text);
+  }
 
-    final maxCount = sorted.isNotEmpty ? sorted.first.value : 1;
+  @override
+  Widget build(BuildContext context) {
+    final provider = Provider.of<TopJournalProvider>(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -34,27 +46,52 @@ class TopJournalScreen extends StatelessWidget {
                 ? context.s.topJournalsSubtitleForTopic(provider.currentTopic)
                 : context.s.topJournalsSubtitleDefault,
             icon: Icons.menu_book_rounded,
+            child: TopicSearchBar(
+              hintText: 'Search topic for top journals',
+              initialValue: _currentSearchText,
+              onSearch: _onSearch,
+            ),
           ),
-          Expanded(
-            child: sorted.isEmpty
-                ? StateView.empty(
-                    icon: Icons.menu_book_rounded,
-                    title: context.s.noJournalsTitle,
-                    message: context.s.noJournalsMessage,
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
-                    itemCount: sorted.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final entry = sorted[index];
-                      return _journalCard(
-                          context, index + 1, entry.key, entry.value, maxCount);
-                    },
-                  ),
-          ),
+          Expanded(child: _buildBody(provider)),
         ],
       ),
+    );
+  }
+
+  Widget _buildBody(TopJournalProvider provider) {
+    if (provider.isLoading) {
+      return StateView.loading(message: context.s.loadingJournals);
+    }
+
+    if (provider.errorMessage.isNotEmpty) {
+      return StateView.error(
+        context.s.somethingWentWrong,
+        onRetry: () => provider.search(provider.currentTopic),
+      );
+    }
+
+    final sorted = provider.journals;
+    final maxCount = provider.maxCount;
+
+    if (sorted.isEmpty && provider.currentTopic.isNotEmpty) {
+      return StateView.empty(
+        icon: Icons.menu_book_rounded,
+        title: context.s.noJournalsTitle,
+        message: context.s.noJournalsMessage,
+      );
+    } else if (sorted.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+      itemCount: sorted.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final entry = sorted[index];
+        return _journalCard(
+            context, index + 1, entry.key, entry.value, maxCount);
+      },
     );
   }
 

@@ -5,37 +5,221 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/locale_provider.dart';
-import '../providers/publication_provider.dart';
+import '../providers/dashboard_provider.dart';
+import '../providers/recent_provider.dart';
 import '../models/dashboard_summary.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
+import '../widgets/topic_search_bar.dart';
 import 'detail_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+class DashboardScreen extends StatefulWidget {
+  final GlobalKey<ScaffoldState>? scaffoldKey;
+  const DashboardScreen({super.key, this.scaffoldKey});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  String _currentSearchText = "";
+
+  void _onSearch(String topic) {
+    if (topic.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.s.enterTopicWarning)),
+      );
+      return;
+    }
+    setState(() {
+      _currentSearchText = topic;
+    });
+    context.read<RecentProvider>().addSearch(topic);
+    Provider.of<DashboardProvider>(context, listen: false).search(topic);
+  }
+
+  void _onChipTapped(String topic) {
+    _onSearch(topic);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<PublicationProvider>(context);
+    final provider = Provider.of<DashboardProvider>(context);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Column(
-        children: [
-          BrandedHeader(
-            title: context.s.dashboardTitle,
-            subtitle: provider.currentTopic.isNotEmpty
-                ? context.s.dashboardSubtitleForTopic(provider.currentTopic)
-                : context.s.dashboardSubtitleDefault,
-            icon: Icons.dashboard_rounded,
+    return Column(
+      children: [
+        _buildHeader(),
+        Expanded(child: _buildBody(context, provider)),
+      ],
+    );
+  }
+
+  // ─── Header with search ─────────────────────────────────
+
+  Widget _buildHeader() {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: AppGradients.brand,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(AppRadius.xl),
+          bottomRight: Radius.circular(AppRadius.xl),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Material(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () {
+                        widget.scaffoldKey?.currentState?.openDrawer();
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(9),
+                        child: Icon(Icons.menu_rounded,
+                            color: Colors.white, size: 22),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          context.s.dashboardTitle,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          context.s.searchHeaderSubtitle,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              TopicSearchBar(
+                hintText: 'Search topic for dashboard insights',
+                initialValue: _currentSearchText,
+                onSearch: _onSearch,
+              ),
+              const SizedBox(height: 16),
+              _buildHeaderSuggestions(),
+            ],
           ),
-          Expanded(child: _buildBody(context, provider)),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, PublicationProvider provider) {
+  Widget _buildTopicChips() {
+    final topics = [
+      "Artificial Intelligence",
+      "Data Science",
+      "Cybersecurity",
+      "Blockchain",
+      "IoT",
+    ];
+    final chipHeight =
+        MediaQuery.textScalerOf(context).scale(34).clamp(34.0, 52.0);
+    return SizedBox(
+      height: chipHeight,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: topics.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          return Center(
+            child: Material(
+              color: Colors.white.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(20),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => _onChipTapped(topics[i]),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  child: Text(
+                    topics[i],
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHeaderSuggestions() {
+    return _buildTopicChips();
+  }
+
+
+
+  Widget _recentRow(String topic) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _onChipTapped(topic),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              const Icon(Icons.history_rounded,
+                  size: 18, color: AppColors.faint),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(topic,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.ink)),
+              ),
+              GestureDetector(
+                onTap: () => context.read<RecentProvider>().removeSearch(topic),
+                behavior: HitTestBehavior.opaque,
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(Icons.close_rounded,
+                      size: 18, color: AppColors.faint),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── Body ───────────────────────────────────────────────
+
+  Widget _buildBody(BuildContext context, DashboardProvider provider) {
     if (provider.isLoading) {
       return SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -317,16 +501,25 @@ class DashboardScreen extends StatelessWidget {
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
                     getTooltipColor: (_) => AppColors.ink,
-                    getTooltipItems: (touchedSpots) => touchedSpots
-                        .map((spot) => LineTooltipItem(
-                              context.s.chartPapersTooltip(spot.x.toInt(),
-                                  _formatNumber(spot.y.toInt())),
-                              const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12),
-                            ))
-                        .toList(),
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        try {
+                          return LineTooltipItem(
+                            context.s.chartPapersTooltip(spot.x.toInt(),
+                                _formatNumber(spot.y.toInt())),
+                            const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12),
+                          );
+                        } catch (_) {
+                          return const LineTooltipItem(
+                            '',
+                            TextStyle(color: Colors.white),
+                          );
+                        }
+                      }).toList();
+                    },
                   ),
                 ),
               ),
