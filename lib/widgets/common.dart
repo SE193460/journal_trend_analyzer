@@ -12,6 +12,11 @@ class BrandedHeader extends StatelessWidget {
   final Widget? leading;
   final Widget? trailing;
 
+  /// When provided, a hamburger (menu) button is shown as the leading widget
+  /// and the [icon] logo is hidden — used to open the app drawer from screens
+  /// that live inside the main tabbed scaffold (e.g. Trends, Compare).
+  final VoidCallback? onMenuTap;
+
   /// Optional content rendered below the title (e.g. a search field).
   final Widget? child;
 
@@ -22,6 +27,7 @@ class BrandedHeader extends StatelessWidget {
     this.icon,
     this.leading,
     this.trailing,
+    this.onMenuTap,
     this.child,
   });
 
@@ -29,12 +35,20 @@ class BrandedHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final canPop = Navigator.of(context).canPop();
     final Widget? lead = leading ??
-        (canPop
+        (onMenuTap != null
             ? _CircleIconButton(
-                icon: Icons.arrow_back_ios_new_rounded,
-                onTap: () => Navigator.of(context).maybePop(),
+                icon: Icons.menu_rounded,
+                onTap: onMenuTap!,
               )
-            : null);
+            : (canPop
+                ? _CircleIconButton(
+                    icon: Icons.arrow_back_ios_new_rounded,
+                    onTap: () => Navigator.of(context).maybePop(),
+                  )
+                : null));
+
+    // The menu button replaces the logo icon, mirroring the Dashboard header.
+    final bool showIcon = icon != null && onMenuTap == null;
 
     return Container(
       width: double.infinity,
@@ -59,7 +73,7 @@ class BrandedHeader extends StatelessWidget {
                       padding: const EdgeInsets.only(right: 12),
                       child: lead,
                     ),
-                  if (icon != null) ...[
+                  if (showIcon) ...[
                     Container(
                       padding: const EdgeInsets.all(9),
                       decoration: BoxDecoration(

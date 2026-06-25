@@ -9,6 +9,11 @@ class ResearchDashboardSummary {
   final Publication? mostInfluentialPaper;
   final List<PublicationTrendPoint> publicationTrend;
 
+  /// Number of papers actually fetched from the API for this search
+  /// (capped by the search limit). This is the real "Papers Retrieved" count,
+  /// not the total number of matching works on OpenAlex.
+  final int papersRetrieved;
+
   ResearchDashboardSummary({
     required this.totalPublications,
     required this.averageCitationCount,
@@ -17,5 +22,6 @@ class ResearchDashboardSummary {
     this.topAuthor,
     this.mostInfluentialPaper,
     required this.publicationTrend,
+    this.papersRetrieved = 0,
   });
 }

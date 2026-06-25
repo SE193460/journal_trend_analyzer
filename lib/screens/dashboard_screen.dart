@@ -27,13 +27,6 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   String _currentSearchText = "";
-  final TextEditingController _limitController = TextEditingController(text: '50');
-
-  @override
-  void dispose() {
-    _limitController.dispose();
-    super.dispose();
-  }
 
   void _onSearch(String topic) {
     if (topic.isEmpty) {
@@ -46,35 +39,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _currentSearchText = topic;
     });
     context.read<RecentProvider>().addSearch(topic);
-    
-    final dashboardProvider = Provider.of<DashboardProvider>(context, listen: false);
-    dashboardProvider.search(topic, limit: dashboardProvider.selectedLimit);
-    
+
+    Provider.of<DashboardProvider>(context, listen: false).search(topic);
     Provider.of<TopJournalProvider>(context, listen: false).search(topic);
     Provider.of<TopAuthorProvider>(context, listen: false).search(topic);
-  }
-
-  void _onLimitSubmitted(String value) {
-    final intValue = int.tryParse(value);
-    if (intValue == null || intValue <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid number greater than 0')),
-      );
-      // Reset text field to current limit
-      _limitController.text = Provider.of<DashboardProvider>(context, listen: false).selectedLimit.toString();
-      return;
-    }
-    
-    final provider = Provider.of<DashboardProvider>(context, listen: false);
-    if (provider.selectedLimit != intValue) {
-      provider.selectedLimit = intValue;
-      if (_currentSearchText.isNotEmpty) {
-        _onSearch(_currentSearchText);
-      } else {
-        // Just update UI if no search is active
-        setState(() {});
-      }
-    }
   }
 
   void _onChipTapped(String topic) {
@@ -87,7 +55,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Column(
       children: [
-        _buildHeader(),
+        _buildHeader(provider),
         Expanded(child: _buildBody(context, provider)),
       ],
     );
@@ -95,7 +63,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // ─── Header with search ─────────────────────────────────
 
-  Widget _buildHeader() {
+  Widget _buildHeader(DashboardProvider provider) {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -160,8 +128,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 initialValue: _currentSearchText,
                 onSearch: _onSearch,
               ),
-              const SizedBox(height: 12),
-              _buildLimitFilter(),
+              _buildPapersRetrieved(provider),
               const SizedBox(height: 16),
               _buildTopicChips(),
             ],
@@ -215,40 +182,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildLimitFilter() {
-    return Row(
-      children: [
-        const Icon(Icons.filter_list_rounded, color: Colors.white70, size: 16),
-        const SizedBox(width: 8),
-        const Text(
-          "Papers Retrieved:",
-          style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          height: 32,
-          width: 80,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(16),
+  // Shows the real number of papers retrieved, but only after the user has
+  // searched. Before any search it stays hidden so we never show a stale "50".
+  Widget _buildPapersRetrieved(DashboardProvider provider) {
+    if (!provider.hasSearched) return const SizedBox.shrink();
+
+    final value = provider.isLoading ? "…" : "${provider.papersRetrieved}";
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        children: [
+          const Icon(Icons.description_outlined, color: Colors.white70, size: 16),
+          const SizedBox(width: 8),
+          const Text(
+            "Papers Retrieved:",
+            style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
           ),
-          child: TextField(
-            controller: _limitController,
-            keyboardType: TextInputType.number,
-            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(vertical: 8),
-            ),
-            onSubmitted: _onLimitSubmitted,
-            textInputAction: TextInputAction.done,
-            cursorColor: Colors.white,
-            textAlign: TextAlign.center,
+          const SizedBox(width: 8),
+          Text(
+            value,
+            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

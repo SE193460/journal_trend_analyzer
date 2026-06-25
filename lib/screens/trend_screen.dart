@@ -13,7 +13,8 @@ import '../widgets/topic_search_bar.dart';
 import 'detail_screen.dart';
 
 class TrendScreen extends StatefulWidget {
-  const TrendScreen({super.key});
+  final GlobalKey<ScaffoldState>? scaffoldKey;
+  const TrendScreen({super.key, this.scaffoldKey});
 
   @override
   State<TrendScreen> createState() => _TrendScreenState();
@@ -53,6 +54,9 @@ class _TrendScreenState extends State<TrendScreen> {
                 ? context.s.trendSubtitleForTopic(provider.currentTopic)
                 : context.s.trendSubtitleDefault,
             icon: Icons.trending_up_rounded,
+            onMenuTap: widget.scaffoldKey != null
+                ? () => widget.scaffoldKey?.currentState?.openDrawer()
+                : null,
             child: TopicSearchBar(
               hintText: 'Search topic for trend analysis',
               initialValue: _currentSearchText,

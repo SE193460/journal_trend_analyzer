@@ -23,17 +23,25 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_currentIndex == 1) return _wrapWithBottomNav(const TrendScreen());
-    if (_currentIndex == 2) {
-      return _wrapWithBottomNav(const CompareTopicsScreen());
+    // A single scaffold hosts the drawer for every tab so that Trends and
+    // Compare can open the same sidebar from their header menu button.
+    final Widget body;
+    switch (_currentIndex) {
+      case 1:
+        body = TrendScreen(scaffoldKey: _scaffoldKey);
+        break;
+      case 2:
+        body = CompareTopicsScreen(scaffoldKey: _scaffoldKey);
+        break;
+      default:
+        body = DashboardScreen(scaffoldKey: _scaffoldKey);
     }
 
-    // Index 0 — Dashboard (home tab with search bar built in)
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppColors.background,
       drawer: _buildDrawer(),
-      body: DashboardScreen(scaffoldKey: _scaffoldKey),
+      body: body,
       bottomNavigationBar: _buildBottomNav(),
     );
   }
@@ -142,14 +150,6 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   // ─── Bottom navigation ───────────────────────────────────
-
-  Widget _wrapWithBottomNav(Widget child) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: child,
-      bottomNavigationBar: _buildBottomNav(),
-    );
-  }
 
   Widget _buildBottomNav() {
     return Container(

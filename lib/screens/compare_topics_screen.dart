@@ -14,7 +14,8 @@ import '../widgets/common.dart';
 
 /// Lets the user compare 2–3 research topics side by side using OpenAlex data.
 class CompareTopicsScreen extends StatefulWidget {
-  const CompareTopicsScreen({super.key});
+  final GlobalKey<ScaffoldState>? scaffoldKey;
+  const CompareTopicsScreen({super.key, this.scaffoldKey});
 
   @override
   State<CompareTopicsScreen> createState() => _CompareTopicsScreenState();
@@ -107,6 +108,9 @@ class _CompareTopicsScreenState extends State<CompareTopicsScreen> {
             title: context.s.compareTitle,
             subtitle: context.s.compareSubtitle,
             icon: Icons.compare_arrows_rounded,
+            onMenuTap: widget.scaffoldKey != null
+                ? () => widget.scaffoldKey?.currentState?.openDrawer()
+                : null,
           ),
           Expanded(
             child: SingleChildScrollView(

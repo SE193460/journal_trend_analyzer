@@ -182,20 +182,24 @@ class OpenAlexService{
     }
   }
 
-  Future<double> fetchAverageCitationCount(String keyword, int limit) async {
+  /// Fetches up to [limit] papers and returns both the average citation count
+  /// and the real number of papers retrieved (`results.length`, which may be
+  /// less than [limit] when fewer matching works exist).
+  Future<({double avg, int count})> fetchCitationStats(
+      String keyword, int limit) async {
     try {
       final response = await dio.get(
         'https://api.openalex.org/works?search=$keyword&sort=cited_by_count:desc&per-page=$limit'
       );
       List results = response.data['results'];
-      if (results.isEmpty) return 0;
+      if (results.isEmpty) return (avg: 0.0, count: 0);
       int totalCitations = 0;
       for (var r in results) {
         totalCitations += (r['cited_by_count'] as int?) ?? 0;
       }
-      return totalCitations / results.length;
+      return (avg: totalCitations / results.length, count: results.length);
     } catch (e) {
-      return 0;
+      return (avg: 0.0, count: 0);
     }
   }
 
@@ -206,7 +210,7 @@ class OpenAlexService{
       fetchTopJournal(keyword),                  // 2
       fetchDashboardTopAuthor(keyword),          // 3
       fetchMostInfluentialPaper(keyword),         // 4
-      fetchAverageCitationCount(keyword, limit),  // 5
+      fetchCitationStats(keyword, limit),         // 5
     ]);
 
     int totalPublications = futures[0] as int;
@@ -214,7 +218,9 @@ class OpenAlexService{
     String? topJournal = futures[2] as String?;
     String? topAuthor = futures[3] as String?;
     Publication? mostInfluential = futures[4] as Publication?;
-    double avgCitations = futures[5] as double;
+    final citationStats = futures[5] as ({double avg, int count});
+    double avgCitations = citationStats.avg;
+    int papersRetrieved = citationStats.count;
 
     // Most active year from trend data
     int? mostActiveYear;
@@ -234,6 +240,7 @@ class OpenAlexService{
       topAuthor: topAuthor,
       mostInfluentialPaper: mostInfluential,
       publicationTrend: trend,
+      papersRetrieved: papersRetrieved,
     );
   }
 }
